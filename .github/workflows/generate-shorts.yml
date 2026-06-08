@@ -39,8 +39,7 @@ jobs:
       run: node scripts/generate_video.js
       env:
         BOOK_ID: ${{ github.event.inputs.book_id || 'crimen-y-castigo' }}
-        ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-        ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+        EDGE_TTS_VOICE: es-ES-AlvaroNeural
 
     - name: Subir Video Generado como Artefacto
       uses: actions/upload-artifact@v4

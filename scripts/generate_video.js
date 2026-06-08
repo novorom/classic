@@ -1,31 +1,9 @@
 import fs from "fs";
 import path from "path";
+import process from "process";
 import { exec } from "child_process";
-import https from "https";
+import { EdgeTTS } from "node-edge-tts";
 import { classicsData } from "../src/data/classicsData.js";
-
-// Helper to download files
-const downloadFile = (url, dest) => {
-  return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
-    https.get(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-      }
-    }, (response) => {
-      if (response.statusCode !== 200) {
-        reject(new Error(`Failed to get '${url}' (${response.statusCode})`));
-        return;
-      }
-      response.pipe(file);
-      file.on("finish", () => {
-        file.close(resolve);
-      });
-    }).on("error", (err) => {
-      fs.unlink(dest, () => reject(err));
-    });
-  });
-};
 
 const escapeForShell = (value) => value.replace(/(["`\\$])/g, "\\$1");
 const escapeForConcat = (value) => value.replace(/'/g, "'\\''");
@@ -66,56 +44,24 @@ const generateSrt = (subtitles) => {
   }).join("\n");
 };
 
-const synthesizeWithGoogleTts = async (text, destPath) => {
-  const encodedText = encodeURIComponent(text);
-  const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=es&client=tw-ob&q=${encodedText}`;
-  await downloadFile(ttsUrl, destPath);
-};
+const createEdgeTtsClient = () => {
+  const voice = process.env.EDGE_TTS_VOICE || "es-ES-AlvaroNeural";
+  const rate = process.env.EDGE_TTS_RATE || "-4%";
+  const pitch = process.env.EDGE_TTS_PITCH || "+0Hz";
+  const volume = process.env.EDGE_TTS_VOLUME || "+0%";
 
-const synthesizeWithElevenLabs = async (text, destPath, apiKey) => {
-  const voiceId = process.env.ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL";
-  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-    method: "POST",
-    headers: {
-      "Accept": "audio/mpeg",
-      "Content-Type": "application/json",
-      "xi-api-key": apiKey
-    },
-    body: JSON.stringify({
-      text,
-      model_id: "eleven_multilingual_v2",
-      voice_settings: {
-        stability: 0.45,
-        similarity_boost: 0.82,
-        style: 0.28,
-        use_speaker_boost: true
-      }
-    })
+  return new EdgeTTS({
+    voice,
+    lang: "es-ES",
+    outputFormat: "audio-24khz-96kbitrate-mono-mp3",
+    rate,
+    pitch,
+    volume
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`ElevenLabs devolvió ${response.status}: ${errorText}`);
-  }
-
-  const audioBuffer = Buffer.from(await response.arrayBuffer());
-  fs.writeFileSync(destPath, audioBuffer);
 };
 
-const synthesizeSpeech = async (text, destPath) => {
-  const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
-
-  if (elevenLabsApiKey) {
-    try {
-      await synthesizeWithElevenLabs(text, destPath, elevenLabsApiKey);
-      return "elevenlabs";
-    } catch (error) {
-      console.warn(`⚠️ ElevenLabs no respondió correctamente, se usará el respaldo local: ${error.message}`);
-    }
-  }
-
-  await synthesizeWithGoogleTts(text, destPath);
-  return "google-tts";
+const synthesizeSpeech = async (ttsClient, text, destPath) => {
+  await ttsClient.ttsPromise(text, destPath);
 };
 
 const buildAnimatedSegments = async (classic, totalDuration, tempDir) => {
@@ -192,18 +138,17 @@ async function main() {
   fs.writeFileSync(srtPath, srtContent);
   console.log(`✍️ Archivo de subtítulos creado en: ${srtPath}`);
 
+  const ttsClient = createEdgeTtsClient();
   console.log("🎙️ Generando locución en español...");
-  const voiceProvider = process.env.ELEVENLABS_API_KEY ? "ElevenLabs" : "Google TTS (respaldo)";
-  console.log(`   - Proveedor activo: ${voiceProvider}`);
+  console.log(`   - Proveedor activo: Edge TTS (${process.env.EDGE_TTS_VOICE || "es-ES-AlvaroNeural"})`);
   for (let i = 0; i < subtitles.length; i++) {
     const destPath = path.join(tempDir, `line_${i}.mp3`);
     
-    console.log(`   - Descargando línea ${i + 1}/${subtitles.length}`);
-    const providerUsed = await synthesizeSpeech(subtitles[i].text, destPath);
-    console.log(`     ${providerUsed === "elevenlabs" ? "✓" : "↺"} Voz generada con ${providerUsed}`);
+    console.log(`   - Generando línea ${i + 1}/${subtitles.length}`);
+    await synthesizeSpeech(ttsClient, subtitles[i].text, destPath);
+    console.log("     ✓ Voz generada con Edge TTS");
     audioFiles.push(destPath);
-    // Add small delay to avoid rate limiting
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 250));
   }
 
   // Create a silent audio track of the exact duration
@@ -266,7 +211,7 @@ async function main() {
     console.log("   - Intentando renderizar con subtítulos incrustados (requiere FFmpeg con libass)...");
     await runCommand(renderCmdWithSubtitles);
     console.log(`✅ ¡Éxito! El video con subtítulos quemados se ha generado en:\n👉 ${outputVideoPath}`);
-  } catch (err) {
+  } catch {
     console.warn("⚠️ Advertencia: Tu FFmpeg local no soporta el filtro de subtítulos (falta libass).");
     console.log("   - Intentando renderizar video sin subtítulos incrustados (los subtítulos se exportarán en un archivo .srt aparte)...");
     try {
