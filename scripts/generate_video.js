@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import process from "process";
+import { Buffer } from "buffer";
 import { exec } from "child_process";
 import { EdgeTTS } from "node-edge-tts";
 import { classicsData } from "../src/data/classicsData.js";
@@ -8,6 +9,7 @@ import { classicsData } from "../src/data/classicsData.js";
 const escapeForShell = (value) => value.replace(/(["`\\$])/g, "\\$1");
 const escapeForConcat = (value) => value.replace(/'/g, "'\\''");
 const escapeForFfmpeg = (value) => value.replace(/\\/g, "/").replace(/:/g, "\\:");
+const remoteAssetCache = new Map();
 
 // Helper to run shell commands (like ffmpeg)
 const runCommand = (cmd) => {
@@ -28,6 +30,37 @@ const resolvePublicAsset = (assetPath) => {
   }
 
   return path.resolve("./public", assetPath.replace(/^\//, ""));
+};
+
+const downloadRemoteAsset = async (assetUrl, tempDir, fileNameBase) => {
+  if (remoteAssetCache.has(assetUrl)) {
+    return remoteAssetCache.get(assetUrl);
+  }
+
+  const response = await fetch(assetUrl);
+  if (!response.ok) {
+    throw new Error(`No se pudo descargar el asset remoto: ${response.status} ${response.statusText}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "image/png";
+  const extension = contentType.includes("jpeg") ? "jpg" : contentType.includes("webp") ? "webp" : "png";
+  const localPath = path.join(tempDir, `${fileNameBase}.${extension}`);
+  const fileBuffer = Buffer.from(await response.arrayBuffer());
+  fs.writeFileSync(localPath, fileBuffer);
+  remoteAssetCache.set(assetUrl, localPath);
+  return localPath;
+};
+
+const resolveAssetPath = async (assetPath, tempDir, fileNameBase) => {
+  if (!assetPath) {
+    throw new Error("No se recibió una ruta de asset para renderizar el video.");
+  }
+
+  if (/^https?:\/\//.test(assetPath)) {
+    return downloadRemoteAsset(assetPath, tempDir, fileNameBase);
+  }
+
+  return resolvePublicAsset(assetPath);
 };
 
 // Generate SRT file contents from subtitles
@@ -84,7 +117,7 @@ const buildAnimatedSegments = async (classic, totalDuration, tempDir) => {
       continue;
     }
 
-    const imagePath = resolvePublicAsset(slide.image || classic.background);
+    const imagePath = await resolveAssetPath(slide.image || classic.background, tempDir, `slide_image_${index}`);
     const segmentPath = path.join(tempDir, `slide_${index}.mp4`);
     const frames = Math.max(1, Math.round(segmentDuration * 30));
     const motionDirection = index % 2 === 0 ? "1" : "-1";

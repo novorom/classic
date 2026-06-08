@@ -1,3 +1,6 @@
+const aiImage = (prompt, imageSize = "portrait_16_9") =>
+  `https://coreva-normal.trae.ai/api/ide/v1/text_to_image?prompt=${encodeURIComponent(prompt)}&image_size=${imageSize}`;
+
 export const classicsData = [
   {
     id: "pushkin-yo-os-ame",
@@ -8,8 +11,8 @@ export const classicsData = [
     pronunciation: "A-lek-sándr Push-kin",
     year: 1829,
     mood: "Poesía, Romántico, Íntimo",
-    portrait: "/images/war_and_peace.png",
-    background: "/images/war_and_peace.png",
+    portrait: aiImage("romantic oil portrait of young Alexander Pushkin, curly hair, aristocratic 19th century Russian clothing, candlelit study, poetic atmosphere, highly detailed, realistic, elegant composition", "square_hd"),
+    background: aiImage("romantic 19th century Saint Petersburg interior, candlelight, handwritten love letter on desk, window with soft snow outside, cinematic, realistic, vertical composition", "portrait_16_9"),
     recommendedMusic: "Piano nocturno con cuerdas suaves al estilo Glinka",
     hashtags: "#pushkin #poesiarusa #literaturarusa #poesiaenespanol #booktokespanol #reelsliterarios #shortsliterarios",
     socialDescription: "Una adaptación rimada al español de uno de los poemas de amor más famosos de Pushkin, pensada para enganchar en TikTok, Reels y Shorts.",
@@ -47,9 +50,9 @@ export const classicsData = [
       }
     ],
     slides: [
-      { time: 0, image: "/images/war_and_peace.png", caption: "Salón iluminado con velas y nostalgia romántica" },
-      { time: 9, image: "/images/crime_and_punishment.png", caption: "Ventana nocturna y carta nunca enviada" },
-      { time: 18, image: "/images/war_and_peace.png", caption: "Baile lejano convertido en recuerdo" }
+      { time: 0, image: aiImage("romantic candlelit ballroom in imperial Saint Petersburg, golden chandeliers, noble silhouettes dancing, dreamy atmosphere, cinematic realism, vertical frame", "portrait_16_9"), caption: "Salón iluminado con velas y nostalgia romántica" },
+      { time: 9, image: aiImage("close view of handwritten love letter beside a window at night, snow outside, candle flame, melancholy romantic mood, realistic cinematic style, vertical frame", "portrait_16_9"), caption: "Ventana nocturna y carta nunca enviada" },
+      { time: 18, image: aiImage("lonely aristocratic figure remembering a distant dance, blurred ballroom lights, emotional nostalgic scene, realistic oil-cinema fusion, vertical composition", "portrait_16_9"), caption: "Baile lejano convertido en recuerdo" }
     ]
   },
   {
@@ -61,8 +64,8 @@ export const classicsData = [
     pronunciation: "Mee-ja-íl Lér-mon-tof",
     year: 1841,
     mood: "Poesía, Nocturno, Filosófico",
-    portrait: "/images/crime_and_punishment.png",
-    background: "/images/crime_and_punishment.png",
+    portrait: aiImage("dramatic portrait of Mikhail Lermontov, Russian poet in military coat, stormy sky, introspective gaze, realistic painting, cinematic detail", "square_hd"),
+    background: aiImage("solitary road across Russian steppe at night, stars, cold wind, philosophical melancholy, cinematic realism, vertical composition", "portrait_16_9"),
     recommendedMusic: "Pads nocturnos con piano tenue y reverberación profunda",
     hashtags: "#lermontov #poesiarusa #poesiaenespanol #literaturarusa #nightpoetry #bookreels #shortspoetry",
     socialDescription: "Una adaptación lírica y oscura para reels de uno de los poemas más solitarios de la tradición rusa.",
@@ -100,9 +103,9 @@ export const classicsData = [
       }
     ],
     slides: [
-      { time: 0, image: "/images/crime_and_punishment.png", caption: "Camino vacío bajo cielo helado" },
-      { time: 11, image: "/images/master_and_margarita.png", caption: "Noche inmóvil y horizonte oscuro" },
-      { time: 20, image: "/images/crime_and_punishment.png", caption: "Soledad y polvo de estrellas" }
+      { time: 0, image: aiImage("empty road under frozen night sky in Russia, moonlight, vast silence, cold poetic mood, realistic cinematic shot, vertical frame", "portrait_16_9"), caption: "Camino vacío bajo cielo helado" },
+      { time: 11, image: aiImage("dark horizon and still night over lonely fields, subtle mist, existential atmosphere, realistic, cinematic, vertical composition", "portrait_16_9"), caption: "Noche inmóvil y horizonte oscuro" },
+      { time: 20, image: aiImage("solitary traveler beneath bright stars and drifting frost, Russian romantic poetry mood, realistic cinematic art, vertical frame", "portrait_16_9"), caption: "Soledad y polvo de estrellas" }
     ]
   },
   {
@@ -114,8 +117,8 @@ export const classicsData = [
     pronunciation: "Fió-dor Tiút-chef",
     year: 1830,
     mood: "Poesía, Reflexivo, Misterioso",
-    portrait: "/images/master_and_margarita.png",
-    background: "/images/master_and_margarita.png",
+    portrait: aiImage("intellectual portrait of Fyodor Tyutchev, Russian poet, dim interior light, mysterious expression, classical realistic painting, refined detail", "square_hd"),
+    background: aiImage("mysterious foggy room with curtains, candle glow, hidden thoughts, introspective poetic symbolism, realistic cinematic style, vertical frame", "portrait_16_9"),
     recommendedMusic: "Textura ambiental etérea con coro lejano y graves suaves",
     hashtags: "#tiutchev #silentium #poesiarusa #poesiaenespanol #literaturauniversal #reelspoeticos #shortspoetry",
     socialDescription: "Un poema perfecto para reels introspectivos: habla del mundo interior que se rompe cuando intentas explicarlo.",
@@ -153,9 +156,9 @@ export const classicsData = [
       }
     ],
     slides: [
-      { time: 0, image: "/images/master_and_margarita.png", caption: "Niebla, secreto y ojos que callan" },
-      { time: 10, image: "/images/war_and_peace.png", caption: "Luz tenue entre cortinas y pensamientos" },
-      { time: 18, image: "/images/master_and_margarita.png", caption: "Misterio interior sin palabras" }
+      { time: 0, image: aiImage("enigmatic face behind translucent fog and shadows, poetic silence, subtle eye light, cinematic realism, vertical composition", "portrait_16_9"), caption: "Niebla, secreto y ojos que callan" },
+      { time: 10, image: aiImage("soft light through heavy curtains in a quiet Russian room, contemplative atmosphere, realistic cinematic mood, vertical frame", "portrait_16_9"), caption: "Luz tenue entre cortinas y pensamientos" },
+      { time: 18, image: aiImage("abstract but realistic interior symbolizing inner mystery, dark blues, candlelight, poetic silence, cinematic vertical shot", "portrait_16_9"), caption: "Misterio interior sin palabras" }
     ]
   },
   {
@@ -167,8 +170,8 @@ export const classicsData = [
     pronunciation: "Nee-ko-lái Gó-gol",
     year: 1842,
     mood: "Prosa, Trágico, Social",
-    portrait: "/images/crime_and_punishment.png",
-    background: "/images/crime_and_punishment.png",
+    portrait: aiImage("portrait of Nikolai Gogol, sharp features, 19th century Russian writer, dark coat, ironic and tragic atmosphere, realistic oil painting", "square_hd"),
+    background: aiImage("poor clerk office in old Saint Petersburg, worn coat on chair, cold blue light, social realism, cinematic vertical composition", "portrait_16_9"),
     recommendedMusic: "Cuerdas frías con pizzicatos suaves y piano de invierno",
     hashtags: "#gogol #elabrigo #prosarusa #literaturarusa #cuentosclasicos #booktokespanol #shortsliterarios",
     socialDescription: "Un resumen oscuro y viral de un cuento sobre pobreza, humillación y dignidad en San Petersburgo.",
@@ -207,9 +210,9 @@ export const classicsData = [
       }
     ],
     slides: [
-      { time: 0, image: "/images/crime_and_punishment.png", caption: "Oficina gris y abrigo gastado" },
-      { time: 12, image: "/images/war_and_peace.png", caption: "Breve momento de brillo y orgullo" },
-      { time: 21, image: "/images/crime_and_punishment.png", caption: "Viento helado sobre la ciudad" }
+      { time: 0, image: aiImage("bleak bureaucratic office in imperial Saint Petersburg, shabby overcoat, papers, exhausted clerk, cinematic realism, vertical frame", "portrait_16_9"), caption: "Oficina gris y abrigo gastado" },
+      { time: 12, image: aiImage("poor man wearing a new overcoat for the first time, winter street lights, fragile pride, emotional cinematic realism, vertical shot", "portrait_16_9"), caption: "Breve momento de brillo y orgullo" },
+      { time: 21, image: aiImage("icy Saint Petersburg street at night, snowstorm, loneliness, social tragedy mood, realistic cinematic vertical composition", "portrait_16_9"), caption: "Viento helado sobre la ciudad" }
     ]
   },
   {
@@ -221,8 +224,8 @@ export const classicsData = [
     pronunciation: "An-tón Ché-jof",
     year: 1899,
     mood: "Prosa, Romántico, Elegante",
-    portrait: "/images/war_and_peace.png",
-    background: "/images/war_and_peace.png",
+    portrait: aiImage("portrait of Anton Chekhov, refined beard, calm intelligent eyes, late 19th century suit, elegant Russian literary atmosphere, realistic painting", "square_hd"),
+    background: aiImage("elegant seaside promenade at Yalta, summer light, distant woman with small dog, wistful romantic atmosphere, cinematic realism, vertical frame", "portrait_16_9"),
     recommendedMusic: "Vals lento con piano cálido y cuerdas discretas",
     hashtags: "#chejov #ladamadelperrito #prosarusa #literaturarusa #romanceclasico #reelsliterarios #booktokespanol",
     socialDescription: "Un clásico perfecto para reels románticos: amor tardío, culpa, deseo y una verdad que ya no se puede esconder.",
@@ -261,9 +264,9 @@ export const classicsData = [
       }
     ],
     slides: [
-      { time: 0, image: "/images/war_and_peace.png", caption: "Verano elegante junto al mar" },
-      { time: 11, image: "/images/master_and_margarita.png", caption: "Deseo, secreto y distancia" },
-      { time: 21, image: "/images/war_and_peace.png", caption: "Encuentro tardío en un salón silencioso" }
+      { time: 0, image: aiImage("elegant summer seaside in Yalta, woman walking with small dog, soft luxury, romantic literary mood, realistic cinematic vertical shot", "portrait_16_9"), caption: "Verano elegante junto al mar" },
+      { time: 11, image: aiImage("secret lovers separated by distance, train station melancholy, restrained desire, cinematic realism, vertical composition", "portrait_16_9"), caption: "Deseo, secreto y distancia" },
+      { time: 21, image: aiImage("late reunion in quiet aristocratic salon, emotional restraint, soft lamplight, realistic cinematic romance, vertical frame", "portrait_16_9"), caption: "Encuentro tardío en un salón silencioso" }
     ]
   },
   {
@@ -275,8 +278,8 @@ export const classicsData = [
     pronunciation: "Fió-dor Dos-to-yév-skee",
     year: 1848,
     mood: "Prosa, Melancólico, Urbano",
-    portrait: "/images/dostoyevsky.png",
-    background: "/images/crime_and_punishment.png",
+    portrait: aiImage("portrait of Fyodor Dostoevsky, intense melancholic eyes, beard, dark 19th century attire, moody studio light, realistic oil painting", "square_hd"),
+    background: aiImage("white night over Saint Petersburg canal, pale sky, lonely dreamer by water, romantic melancholy, cinematic realistic vertical frame", "portrait_16_9"),
     recommendedMusic: "Piano íntimo con pads nocturnos y eco suave",
     hashtags: "#dostoyevski #nochesblancas #prosarusa #literaturarusa #romancemelancolico #bookreels #shortsliterarios",
     socialDescription: "Una historia perfecta para reels melancólicos: una ciudad nocturna, una esperanza breve y un corazón demasiado sincero.",
@@ -314,9 +317,9 @@ export const classicsData = [
       }
     ],
     slides: [
-      { time: 0, image: "/images/crime_and_punishment.png", caption: "Canal nocturno y farolas pálidas" },
-      { time: 10, image: "/images/dostoyevsky.png", caption: "Soñador y ciudad suspendidos en la noche" },
-      { time: 19, image: "/images/war_and_peace.png", caption: "Esperanza breve en una noche blanca" }
+      { time: 0, image: aiImage("Saint Petersburg canal during white night, pale glowing sky, wet stone, lone figure, dreamy cinematic realism, vertical shot", "portrait_16_9"), caption: "Canal nocturno y farolas pálidas" },
+      { time: 10, image: aiImage("young dreamer walking through Saint Petersburg under luminous night sky, poetic sadness, cinematic realism, vertical frame", "portrait_16_9"), caption: "Soñador y ciudad suspendidos en la noche" },
+      { time: 19, image: aiImage("brief romantic hope on bridge during white night, soft glow, impossible love atmosphere, realistic cinematic vertical composition", "portrait_16_9"), caption: "Esperanza breve en una noche blanca" }
     ]
   }
 ];
