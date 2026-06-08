@@ -65,8 +65,12 @@ async function main() {
   console.log(`🗣️ Idioma: Español (Estructura de Shorts)`);
   
   const tempDir = path.resolve("./temp_assets");
+  const distDir = path.resolve("./dist");
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir);
+  }
+  if (!fs.existsSync(distDir)) {
+    fs.mkdirSync(distDir, { recursive: true });
   }
 
   const audioFiles = [];
@@ -158,7 +162,12 @@ async function main() {
       console.log(`ℹ️ Puedes subir este archivo .srt directamente a YouTube/TikTok junto con el video.`);
     } catch (fallbackErr) {
       console.error("❌ Error grave al renderizar el video:", fallbackErr);
+      throw fallbackErr;
     }
+  }
+
+  if (!fs.existsSync(outputVideoPath)) {
+    throw new Error(`El video final no fue generado en la ruta esperada: ${outputVideoPath}`);
   }
 
   // Clean up temporary assets
