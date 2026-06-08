@@ -46,10 +46,12 @@ jobs:
         path: dist/clasicos_corto_output.mp4
         retention-days: 7
 
-    # OPCIONAL: Publicación Automática
-    # Puedes configurar pasos adicionales para enviar el video a Telegram, YouTube o TikTok:
-    # 
-    # - name: Enviar a Telegram Bot (Cola de Contenido)
-    #   if: success()
-    #   run: |
-    #     curl -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" -F video=@dist/clasicos_corto_output.mp4 -F caption="Nuevo Short generado listo para publicar! 📖🎥" https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendVideo
+    - name: Publicar Video en YouTube Shorts e Instagram Reels
+      if: success()
+      run: node scripts/publish.js
+      env:
+        YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+        YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+        YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+        INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
