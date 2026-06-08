@@ -29,8 +29,11 @@ jobs:
     - name: Instalar Dependencias
       run: npm install
 
-    - name: Verificar Instalación de FFmpeg
-      run: ffmpeg -version
+    - name: Instalar FFmpeg
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y ffmpeg
+        ffmpeg -version
 
     - name: Generar Video (Español)
       run: node scripts/generate_video.js
