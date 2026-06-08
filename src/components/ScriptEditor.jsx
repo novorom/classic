@@ -33,13 +33,7 @@ export default function ScriptEditor({ classic, activeScriptIndex, setActiveScri
     });
 
     teleprompterFormat += `\n\n--- SUGERENCIA DE PROMPT PARA VOZ IA ---\n`;
-    if (classic.id === "crimen-y-castigo") {
-      teleprompterFormat += `Voz: Masculina, madura, profunda, tono dramático y susurrante, ritmo pausado con tensión psicológica. Estilo documental.`;
-    } else if (classic.id === "guerra-y-paz") {
-      teleprompterFormat += `Voz: Masculina o Femenina, culta, elegante, tono épico y noble, ritmo medio, entonación cinematográfica.`;
-    } else {
-      teleprompterFormat += `Voz: Masculina, irónica, teatral, tono misterioso con sarcasmo sutil, ritmo dinámico.`;
-    }
+    teleprompterFormat += `Voz: ${classic.voiceProfile}`;
 
     navigator.clipboard.writeText(teleprompterFormat);
     setCopied(true);
@@ -53,12 +47,12 @@ export default function ScriptEditor({ classic, activeScriptIndex, setActiveScri
   return (
     <div className="script-editor-container card-premium">
       <h3 className="section-title">
-        <span className="sparkle">✍️</span> Editor de Guion y Tono
+        <span className="sparkle">✍️</span> Guion para TikTok, Reels y Shorts
       </h3>
 
       {/* Tone Selection */}
       <div className="tone-selector">
-        <span className="selector-label">Selecciona el enfoque del video:</span>
+        <span className="selector-label">Selecciona el enfoque narrativo del reel:</span>
         <div className="tones-list">
           {scripts.map((sc, idx) => (
             <button
@@ -84,7 +78,7 @@ export default function ScriptEditor({ classic, activeScriptIndex, setActiveScri
           value={editedText}
           onChange={(e) => setEditedText(e.target.value)}
           className="script-textarea"
-          placeholder="Escribe el guion aquí, línea por línea..."
+          placeholder="Escribe el guion del reel aquí, línea por línea..."
           rows={10}
         />
         
@@ -117,25 +111,13 @@ export default function ScriptEditor({ classic, activeScriptIndex, setActiveScri
       <div className="voice-prompt-card">
         <div className="voice-prompt-header">
           <span className="voice-icon">🎙️</span>
-          <strong>Configuración de Voz (ElevenLabs / Lovo)</strong>
+          <strong>Configuración de Voz para Narración</strong>
         </div>
         <p className="voice-prompt-text">
-          {classic.id === "crimen-y-castigo" && (
-            <><strong>Voz recomendada:</strong> Masculina, profunda, susurrante y con tensión psicológica. <em>"Estilo Raskólnikov"</em>.</>
-          )}
-          {classic.id === "guerra-y-paz" && (
-            <><strong>Voz recomendada:</strong> Elegante, aristocrática, estilo documental histórico. Ritmo solemne.</>
-          )}
-          {classic.id === "el-maestro-y-margarita" && (
-            <><strong>Voz recomendada:</strong> Irónica, misteriosa, con toques de sarcasmo y ritmo teatral acelerado.</>
-          )}
+          <><strong>Voz recomendada:</strong> {classic.voiceProfile}</>
         </p>
         <div className="prompt-copy-box">
-          <code>
-            {classic.id === "crimen-y-castigo" && "Deep raspy male voice, dramatic reading, slow pace, dark gothic ambiance, Spanish language"}
-            {classic.id === "guerra-y-paz" && "Elegant documentary voiceover, epic narration tone, cinematic reading, clear pronunciation"}
-            {classic.id === "el-maestro-y-margarita" && "Theatrical mischievous narrator voice, sarcastic undertone, fast-paced storytelling"}
-          </code>
+          <code>{classic.voicePrompt}</code>
         </div>
       </div>
     </div>

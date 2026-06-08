@@ -39,18 +39,9 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
       filter.Q.setValueAtTime(1, ctx.currentTime);
       filter.connect(masterGain);
 
-      // Determine notes based on selected classic
-      let frequencies = [];
-      if (classic.id === "crimen-y-castigo") {
-        // C Minor - Dark and gloomy (C2, G2, C3, Eb3)
-        frequencies = [65.41, 98.00, 130.81, 155.56];
-      } else if (classic.id === "guerra-y-paz") {
-        // G Major - Epic and noble (G2, D3, G3, B3)
-        frequencies = [98.00, 146.83, 196.00, 246.94];
-      } else {
-        // D Minor - Eerie and satirical (D2, A2, D3, F3)
-        frequencies = [73.42, 110.00, 146.83, 174.61];
-      }
+      const frequencies = classic.soundProfile?.length
+        ? classic.soundProfile
+        : [98.0, 146.83, 196.0, 246.94];
 
       oscillatorsRef.current = frequencies.map((freq, index) => {
         const osc = ctx.createOscillator();
@@ -218,9 +209,9 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
             <div className="social-overlay">
               {/* Creator Info */}
               <div className="creator-info">
-                <div className="creator-username">@ClasicosRusiaEnEspañol</div>
+                <div className="creator-username">@ClasicosRusosReels</div>
                 <div className="video-description">
-                  {classic.title} de {classic.author} 📖 {classic.mood}. {classic.hashtags.split(" ").slice(0, 3).join(" ")}
+                  {classic.title} de {classic.author} · {classic.mood.split(",")[0]} · {classic.hashtags.split(" ").slice(0, 3).join(" ")}
                 </div>
                 <div className="music-tag">
                   <span className="music-icon">🎵</span> {classic.recommendedMusic}
@@ -310,10 +301,10 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
                 onChange={(e) => setSynthEnabled(e.target.checked)} 
               />
               <span className="toggle-custom"></span>
-              🔊 Generar música ambiental en tiempo real (Sintetizador Web Audio)
+              🔊 Generar ambiente en tiempo real para la vista previa
             </label>
             <p className="help-text">
-              Genera una atmósfera musical acorde al libro: <strong>{classic.recommendedMusic.split(" (")[0]}</strong>.
+              Genera una atmósfera musical acorde a la pieza: <strong>{classic.recommendedMusic.split(" (")[0]}</strong>.
             </p>
           </div>
 
