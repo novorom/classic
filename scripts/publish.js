@@ -1,7 +1,21 @@
 import fs from "fs";
 import path from "path";
 import https from "https";
+import { exec } from "child_process";
 import { classicsData } from "../src/data/classicsData.js";
+
+// Helper to run shell commands
+const runCommand = (cmd) => {
+  return new Promise((resolve, reject) => {
+    exec(cmd, (error, stdout, stderr) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(stdout);
+      }
+    });
+  });
+};
 
 // Helper to make HTTPS requests
 const makeRequest = (url, options, postData = null) => {
@@ -32,7 +46,7 @@ const makeRequest = (url, options, postData = null) => {
   });
 };
 
-// Upload video to a temporary public URL (required for Instagram Graph API)
+// Upload video to a temporary public URL (required for Instagram Graph API fallback)
 const uploadToTempStorage = async (filePath) => {
   console.log("📤 Subiendo video a almacenamiento temporal público (tmpfiles.org)...");
   return new Promise((resolve, reject) => {
@@ -61,7 +75,6 @@ const uploadToTempStorage = async (filePath) => {
         try {
           const json = JSON.parse(responseBody);
           if (json.status === "success" && json.data && json.data.url) {
-            // Convert view URL to direct download URL (replace tmpfiles.org/ with tmpfiles.org/dl/)
             const downloadUrl = json.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
             resolve(downloadUrl);
           } else {
@@ -79,7 +92,7 @@ const uploadToTempStorage = async (filePath) => {
   });
 };
 
-// Publish video to Instagram Reels
+// Publish video to Instagram Reels (Fallback Mode)
 const publishToInstagram = async (videoUrl, caption) => {
   const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
   const accountId = process.env.INSTAGRAM_ACCOUNT_ID;
@@ -89,9 +102,7 @@ const publishToInstagram = async (videoUrl, caption) => {
     return;
   }
 
-  console.log("📸 Iniciando publicación en Instagram Reels...");
-  
-  // Step 1: Create media container
+  console.log("📸 [Directo] Publicando en Instagram Reels...");
   const containerUrl = `https://graph.facebook.com/v19.0/${accountId}/media?media_type=REELS&video_url=${encodeURIComponent(videoUrl)}&caption=${encodeURIComponent(caption)}&access_token=${accessToken}`;
   const response = await makeRequest(containerUrl, { method: "POST" });
   
@@ -103,11 +114,10 @@ const publishToInstagram = async (videoUrl, caption) => {
   const containerId = response.body.id;
   console.log(`   - Contenedor creado con ID: ${containerId}. Esperando procesamiento...`);
 
-  // Step 2: Poll status
   let isReady = false;
   let attempts = 0;
   while (!isReady && attempts < 10) {
-    await new Promise(r => setTimeout(r, 15000)); // wait 15 seconds
+    await new Promise(r => setTimeout(r, 15000));
     attempts++;
     
     const statusUrl = `https://graph.facebook.com/v19.0/${containerId}?fields=status_code,status&access_token=${accessToken}`;
@@ -123,23 +133,21 @@ const publishToInstagram = async (videoUrl, caption) => {
   }
 
   if (!isReady) {
-    console.error("❌ Tiempo de espera agotado para el procesamiento del video en Instagram.");
+    console.error("❌ Tiempo de espera agotado en Instagram.");
     return;
   }
 
-  // Step 3: Publish container
-  console.log("   - Publicando Reel en la cuenta...");
   const publishUrl = `https://graph.facebook.com/v19.0/${accountId}/media_publish?creation_id=${containerId}&access_token=${accessToken}`;
   const publishRes = await makeRequest(publishUrl, { method: "POST" });
 
   if (publishRes.statusCode === 200) {
-    console.log("✅ ¡Publicado con éxito en Instagram Reels! ID:", publishRes.body.id);
+    console.log("✅ ¡Publicado en Instagram Reels! ID:", publishRes.body.id);
   } else {
     console.error("❌ Error al publicar en Instagram:", publishRes.body);
   }
 };
 
-// Publish video to YouTube Shorts
+// Publish video to YouTube Shorts (Fallback Mode)
 const publishToYouTube = async (filePath, title, description) => {
   const clientId = process.env.YOUTUBE_CLIENT_ID;
   const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
@@ -150,9 +158,7 @@ const publishToYouTube = async (filePath, title, description) => {
     return;
   }
 
-  console.log("🎥 Iniciando publicación en YouTube Shorts...");
-
-  // Step 1: Refresh access token
+  console.log("🎥 [Directo] Publicando en YouTube Shorts...");
   const tokenUrl = "https://oauth2.googleapis.com/token";
   const postData = `client_id=${clientId}&client_secret=${clientSecret}&refresh_token=${refreshToken}&grant_type=refresh_token`;
   const tokenRes = await makeRequest(tokenUrl, {
@@ -166,14 +172,11 @@ const publishToYouTube = async (filePath, title, description) => {
   }
 
   const accessToken = tokenRes.body.access_token;
-  console.log("   - Token de acceso de Google refrescado correctamente.");
-
-  // Step 2: Resumable Upload Initialization
   const metadata = {
     snippet: {
-      title: title.substring(0, 100), // Max 100 chars
+      title: title.substring(0, 100),
       description: description,
-      categoryId: "22", // People & Blogs
+      categoryId: "22",
       tags: ["shorts", "literatura", "libros"]
     },
     status: {
@@ -185,18 +188,6 @@ const publishToYouTube = async (filePath, title, description) => {
   const metadataStr = JSON.stringify(metadata);
   const uploadInitUrl = "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status";
   
-  const initRes = await makeRequest(uploadInitUrl, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${accessToken}`,
-      "Content-Type": "application/json; charset=UTF-8",
-      "X-Upload-Content-Length": fs.statSync(filePath).size,
-      "X-Upload-Content-Type": "video/mp4"
-    }
-  }, metadataStr);
-
-  // We need the Upload URL from response headers
-  // makeRequest helper doesn't extract headers, let's make a direct request for headers
   const uploadUrl = await new Promise((resolve, reject) => {
     const req = https.request(uploadInitUrl, {
       method: "POST",
@@ -218,21 +209,17 @@ const publishToYouTube = async (filePath, title, description) => {
     req.end();
   });
 
-  console.log("   - Iniciando subida binaria del video a YouTube...");
-  
-  // Step 3: Upload the video file
   const videoBuffer = fs.readFileSync(filePath);
-  const uploadOptions = {
+  const uploadFileRes = await makeRequest(uploadUrl, {
     method: "PUT",
     headers: {
       "Content-Length": videoBuffer.length,
       "Content-Type": "video/mp4"
     }
-  };
+  }, videoBuffer);
 
-  const uploadFileRes = await makeRequest(uploadUrl, uploadOptions, videoBuffer);
   if (uploadFileRes.statusCode === 200 || uploadFileRes.statusCode === 201) {
-    console.log("✅ ¡Publicado con éxito en YouTube Shorts! ID:", uploadFileRes.body.id);
+    console.log("✅ ¡Publicado en YouTube Shorts! ID:", uploadFileRes.body.id);
   } else {
     console.error("❌ Error al subir archivo a YouTube:", uploadFileRes.body);
   }
@@ -241,33 +228,60 @@ const publishToYouTube = async (filePath, title, description) => {
 async function main() {
   const filePath = path.resolve("./dist/clasicos_corto_output.mp4");
   if (!fs.existsSync(filePath)) {
-    console.error(`❌ El archivo de video no existe en la ruta: ${filePath}`);
+    console.error(`❌ El archivo de video no existe en: ${filePath}`);
     process.exit(1);
   }
 
-  // Get metadata from classicsData.js
   const classic = classicsData[0];
   const title = `${classic.title} - ${classic.author}`;
   const description = `¿Conocías este gran clásico de la literatura rusa? Escribe tu opinión en comentarios. 👇\n\n${classic.hashtags}`;
 
-  console.log(`🚀 Iniciando cola de publicación automática para: "${title}"`);
+  const simplifiedKey = process.env.SIMPLIFIED_API_KEY;
+  const simplifiedAccounts = process.env.SIMPLIFIED_ACCOUNT_IDS; // comma-separated account IDs for TikTok, Reels, Shorts
 
-  // 1. YouTube Shorts (Direct upload)
-  try {
-    await publishToYouTube(filePath, title, description);
-  } catch (e) {
-    console.error("❌ Error en la publicación de YouTube:", e);
+  if (simplifiedKey && simplifiedAccounts) {
+    console.log("🚀 [UNIFICADO] Publicando a través de Simplified CLI (TikTok + Instagram + YouTube)...");
+    try {
+      // Step 1: Import video file as workspace asset
+      console.log("   - Importando video en la nube de Simplified...");
+      const importRes = await runCommand(`simplified assets:import --path "${filePath}"`);
+      const asset = JSON.parse(importRes);
+      const assetId = asset.id || (asset.data && asset.data.id);
+      
+      if (!assetId) {
+        throw new Error("No se pudo obtener el ID del recurso importado: " + importRes);
+      }
+      console.log(`   - Recurso importado con éxito. ID: ${assetId}`);
+
+      // Step 2: Create post on all connected platforms
+      console.log("   - Creando la publicación multiplataforma...");
+      const escapedDesc = description.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+      const postCmd = `simplified posts:create -c "${escapedDesc}" -a "${simplifiedAccounts}" --asset-id "${assetId}" --action publish`;
+      const postRes = await runCommand(postCmd);
+      console.log("✅ ¡Éxito! Publicado simultáneamente en todos los canales:", postRes);
+    } catch (err) {
+      console.error("❌ Error al publicar a través de Simplified CLI:", err.message);
+    }
+  } else {
+    console.log("ℹ️ No se detectó SIMPLIFIED_API_KEY. Iniciando publicaciones directas individuales...");
+    
+    // 1. YouTube Shorts (Direct)
+    try {
+      await publishToYouTube(filePath, title, description);
+    } catch (e) {
+      console.error("❌ Error en YouTube:", e);
+    }
+
+    // 2. Instagram Reels (Direct)
+    try {
+      const tempUrl = await uploadToTempStorage(filePath);
+      await publishToInstagram(tempUrl, description);
+    } catch (e) {
+      console.error("❌ Error en Instagram:", e);
+    }
   }
-
-  // 2. Instagram Reels (Requires temp public URL for download)
-  try {
-    const tempUrl = await uploadToTempStorage(filePath);
-    await publishToInstagram(tempUrl, description);
-  } catch (e) {
-    console.error("❌ Error en la publicación de Instagram:", e);
-  }
-
-  console.log("🏁 Procesamiento de publicación finalizado.");
+  
+  console.log("🏁 Proceso de publicación terminado.");
 }
 
 main().catch(console.error);
