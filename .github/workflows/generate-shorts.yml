@@ -39,8 +39,8 @@ jobs:
       run: node scripts/generate_video.js
       env:
         BOOK_ID: ${{ github.event.inputs.book_id || 'crimen-y-castigo' }}
-        # Aquí puedes agregar secrets en GitHub para servicios externos
-        # ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+        ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+        ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
 
     - name: Subir Video Generado como Artefacto
       uses: actions/upload-artifact@v4
