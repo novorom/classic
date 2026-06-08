@@ -78,8 +78,8 @@ const generateSrt = (subtitles) => {
 };
 
 const createEdgeTtsClient = () => {
-  const voice = process.env.EDGE_TTS_VOICE || "es-ES-AlvaroNeural";
-  const rate = process.env.EDGE_TTS_RATE || "-4%";
+  const voice = process.env.EDGE_TTS_VOICE || "es-ES-ElviraNeural";
+  const rate = process.env.EDGE_TTS_RATE || "-2%";
   const pitch = process.env.EDGE_TTS_PITCH || "+0Hz";
   const volume = process.env.EDGE_TTS_VOLUME || "+0%";
 
@@ -155,6 +155,7 @@ async function main() {
   const script = classic.scripts[requestedScriptIndex] || classic.scripts[0];
   const subtitles = script.subtitles;
   const duration = subtitles[subtitles.length - 1].end + 2; // pad duration
+  const enableBackgroundMusic = process.env.ENABLE_BACKGROUND_MUSIC === "true";
 
   console.log(`🎬 Iniciando generación de video para: ${classic.title} (${classic.author})`);
   console.log(`🗣️ Idioma: Español (Estructura de Shorts)`);
@@ -162,8 +163,18 @@ async function main() {
   
   const tempDir = path.resolve("./temp_assets");
   const distDir = path.resolve("./dist");
+  const outputVideoPath = path.resolve("./dist/clasicos_corto_output.mp4");
+  const outputSrtPath = outputVideoPath.replace(".mp4", ".srt");
   fs.mkdirSync(tempDir, { recursive: true });
   fs.mkdirSync(distDir, { recursive: true });
+
+  // Avoid publishing a stale artifact from a previous run.
+  if (fs.existsSync(outputVideoPath)) {
+    fs.rmSync(outputVideoPath, { force: true });
+  }
+  if (fs.existsSync(outputSrtPath)) {
+    fs.rmSync(outputSrtPath, { force: true });
+  }
 
   const audioFiles = [];
   const srtPath = path.join(tempDir, "subtitles.srt");
@@ -197,37 +208,43 @@ async function main() {
   audioFiles.forEach((file, index) => {
     inputs += `-i "${file}" `;
     const startMs = Math.round(subtitles[index].start * 1000);
-    // Mix overlay filter
-    filterComplex += `[${index + 1}:a]adelay=${startMs}|${startMs}[a${index + 1}];`;
+    filterComplex += `[${index + 1}:a]highpass=f=85,lowpass=f=11000,acompressor=threshold=-20dB:ratio=2:attack=10:release=120,afade=t=in:st=0:d=0.05,adelay=${startMs}|${startMs}[a${index + 1}];`;
   });
 
   const mixInputs = audioFiles.map((_, index) => `[a${index + 1}]`).join("");
-  filterComplex += `[0:a]${mixInputs}amix=inputs=${audioFiles.length + 1}:duration=first:dropout_transition=2,highpass=f=90,lowpass=f=12500,acompressor=threshold=-18dB:ratio=2.5:attack=15:release=180:makeup=3,dynaudnorm=f=200:g=7,loudnorm=I=-15:LRA=7:TP=-1.5[mixeda]`;
+  filterComplex += `[0:a]${mixInputs}amix=inputs=${audioFiles.length + 1}:duration=first:dropout_transition=2,highpass=f=80,lowpass=f=11500,acompressor=threshold=-19dB:ratio=2.2:attack=12:release=160:makeup=2.2,dynaudnorm=f=180:g=5,loudnorm=I=-16:LRA=6:TP=-1.5[mixeda]`;
 
   const voiceCombinedPath = path.join(tempDir, "voice_combined.mp3");
   await runCommand(`ffmpeg -y ${inputs} -filter_complex "${filterComplex}" -map "[mixeda]" "${voiceCombinedPath}"`);
   console.log("🔊 Locución combinada creada.");
 
-  const bgMusicPath = path.join(tempDir, "bg_music.mp3");
-  console.log("🎵 Generando base musical ambiental...");
-  await runCommand(
-    `ffmpeg -y ` +
-    `-f lavfi -i "sine=frequency=110:sample_rate=44100:duration=${duration}" ` +
-    `-f lavfi -i "sine=frequency=164.81:sample_rate=44100:duration=${duration}" ` +
-    `-f lavfi -i "anoisesrc=color=pink:amplitude=0.015:duration=${duration}:sample_rate=44100" ` +
-    `-filter_complex "[0:a]volume=0.05[a0];[1:a]volume=0.035[a1];[2:a]lowpass=f=900,highpass=f=120,volume=0.02[a2];[a0][a1][a2]amix=inputs=3:duration=longest,afade=t=in:st=0:d=1.2,afade=t=out:st=${Math.max(0, duration - 1.5)}:d=1.5,lowpass=f=2200[aout]" ` +
-    `-map "[aout]" "${escapeForShell(bgMusicPath)}"`
-  );
-
   const finalAudioPath = path.join(tempDir, "final_audio.mp3");
-  await runCommand(
-    `ffmpeg -y -i "${escapeForShell(voiceCombinedPath)}" -i "${escapeForShell(bgMusicPath)}" ` +
-    `-filter_complex "[0:a]volume=1.2,highpass=f=90,lowpass=f=12500[a0];[1:a]volume=0.22[a1];[a0][a1]amix=inputs=2:duration=first:weights='1 0.24',dynaudnorm=f=180:g=5,loudnorm=I=-14:LRA=7:TP=-1.5[aout]" ` +
-    `-map "[aout]" "${escapeForShell(finalAudioPath)}"`
-  );
+  if (enableBackgroundMusic) {
+    const bgMusicPath = path.join(tempDir, "bg_music.mp3");
+    console.log("🎵 Generando base musical ambiental suave...");
+    await runCommand(
+      `ffmpeg -y ` +
+      `-f lavfi -i "anoisesrc=color=pink:amplitude=0.006:duration=${duration}:sample_rate=44100" ` +
+      `-f lavfi -i "sine=frequency=174.61:sample_rate=44100:duration=${duration}" ` +
+      `-filter_complex "[0:a]lowpass=f=700,highpass=f=120,volume=0.018[a0];[1:a]lowpass=f=500,volume=0.008[a1];[a0][a1]amix=inputs=2:duration=longest,afade=t=in:st=0:d=1.5,afade=t=out:st=${Math.max(0, duration - 2)}:d=2[aout]" ` +
+      `-map "[aout]" "${escapeForShell(bgMusicPath)}"`
+    );
+
+    await runCommand(
+      `ffmpeg -y -i "${escapeForShell(voiceCombinedPath)}" -i "${escapeForShell(bgMusicPath)}" ` +
+      `-filter_complex "[0:a]volume=1.15[a0];[1:a]volume=0.08[a1];[a0][a1]amix=inputs=2:duration=first:weights='1 0.12',dynaudnorm=f=150:g=4,loudnorm=I=-15:LRA=6:TP=-1.5[aout]" ` +
+      `-map "[aout]" "${escapeForShell(finalAudioPath)}"`
+    );
+  } else {
+    console.log("🎵 Música de fondo desactivada para priorizar una voz más limpia.");
+    await runCommand(
+      `ffmpeg -y -i "${escapeForShell(voiceCombinedPath)}" ` +
+      `-filter_complex "[0:a]volume=1.08,dynaudnorm=f=150:g=4,loudnorm=I=-15:LRA=6:TP=-1.5[aout]" ` +
+      `-map "[aout]" "${escapeForShell(finalAudioPath)}"`
+    );
+  }
 
   const animatedVideoPath = await buildAnimatedSegments(classic, duration, tempDir);
-  const outputVideoPath = path.resolve("./dist/clasicos_corto_output.mp4");
 
   console.log("🎥 Renderizando video final 9:16 con animación de slides y subtítulos quemados...");
   
@@ -249,7 +266,6 @@ async function main() {
     console.log("   - Intentando renderizar video sin subtítulos incrustados (los subtítulos se exportarán en un archivo .srt aparte)...");
     try {
       await runCommand(renderCmdNoSubtitles);
-      const outputSrtPath = outputVideoPath.replace(".mp4", ".srt");
       fs.copyFileSync(srtPath, outputSrtPath);
       console.log(`✅ ¡Éxito! Video renderizado sin subtítulos incrustados en:\n👉 ${outputVideoPath}`);
       console.log(`📄 Archivo de subtítulos separado exportado en:\n👉 ${outputSrtPath}`);
