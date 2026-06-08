@@ -1,0 +1,55 @@
+name: Generar Videos Literarios Automáticos
+
+on:
+  schedule:
+    # Se ejecuta dos veces al día: a las 9:00 AM y a las 6:00 PM UTC
+    - cron: '0 9,18 * * *'
+  workflow_dispatch:
+    # Permite activar la generación del video de manera manual desde GitHub
+    inputs:
+      book_id:
+        description: 'ID de la obra a generar (e.g. crimen-y-castigo, guerra-y-paz)'
+        required: false
+        default: 'crimen-y-castigo'
+
+jobs:
+  build-and-generate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Código Fuente
+      uses: actions/checkout@v4
+
+    - name: Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Instalar Dependencias
+      run: npm install
+
+    - name: Verificar Instalación de FFmpeg
+      run: ffmpeg -version
+
+    - name: Generar Video (Español)
+      run: node scripts/generate_video.js
+      env:
+        BOOK_ID: ${{ github.event.inputs.book_id || 'crimen-y-castigo' }}
+        # Aquí puedes agregar secrets en GitHub para servicios externos
+        # ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+
+    - name: Subir Video Generado como Artefacto
+      uses: actions/upload-artifact@v4
+      with:
+        name: video-clasico-literatura
+        path: dist/clasicos_corto_output.mp4
+        retention-days: 7
+
+    # OPCIONAL: Publicación Automática
+    # Puedes configurar pasos adicionales para enviar el video a Telegram, YouTube o TikTok:
+    # 
+    # - name: Enviar a Telegram Bot (Cola de Contenido)
+    #   if: success()
+    #   run: |
+    #     curl -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" -F video=@dist/clasicos_corto_output.mp4 -F caption="Nuevo Short generado listo para publicar! 📖🎥" https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendVideo
