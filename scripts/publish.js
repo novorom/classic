@@ -1,13 +1,15 @@
 import fs from "fs";
 import path from "path";
 import https from "https";
+import process from "process";
+import { Buffer } from "buffer";
 import { exec } from "child_process";
 import { classicsData } from "../src/data/classicsData.js";
 
 // Helper to run shell commands
 const runCommand = (cmd) => {
   return new Promise((resolve, reject) => {
-    exec(cmd, (error, stdout, stderr) => {
+    exec(cmd, (error, stdout) => {
       if (error) {
         reject(error);
       } else {
@@ -29,7 +31,7 @@ const makeRequest = (url, options, postData = null) => {
         try {
           const parsed = JSON.parse(data);
           resolve({ statusCode: res.statusCode, body: parsed });
-        } catch (e) {
+        } catch {
           resolve({ statusCode: res.statusCode, body: data });
         }
       });
@@ -44,6 +46,73 @@ const makeRequest = (url, options, postData = null) => {
     }
     req.end();
   });
+};
+
+const extractTags = (hashtags) =>
+  hashtags
+    .split(/\s+/)
+    .map((tag) => tag.replace(/^#/, "").trim())
+    .filter(Boolean)
+    .slice(0, 12);
+
+const buildPlatformCopy = (classic, script) => {
+  const tags = extractTags(classic.hashtags);
+  const shortHook = script.subtitles[0]?.text || classic.title;
+  const socialBase = classic.socialDescription;
+  const readingAngle = script.tone.toLowerCase();
+
+  return {
+    youtube: {
+      title: `${classic.title} en español | ${classic.author} | ${script.tone} #Shorts`.substring(0, 100),
+      description: [
+        `${socialBase}`,
+        "",
+        `En este short adaptamos ${classic.originalTitle} de ${classic.author} con enfoque "${script.tone}".`,
+        `Ideal para amantes de la literatura rusa, poesía adaptada al español y relatos breves con alta retención.`,
+        "",
+        "Si te gusta este tipo de contenido:",
+        "- suscríbete para más clásicos rusos en español",
+        "- comenta qué autor quieres ver después",
+        "- guarda este video para volver a escucharlo",
+        "",
+        `${classic.hashtags} #shorts #booktube #literatura`
+      ].join("\n"),
+      tags: [...new Set([...tags, "shorts", "literatura", "libros", "poesía", "rusia", readingAngle])].slice(0, 15)
+    },
+    instagram: {
+      caption: [
+        `${shortHook}`,
+        "",
+        `${socialBase}`,
+        `Hoy toca ${classic.author} con un enfoque ${script.tone.toLowerCase()}.`,
+        "",
+        "Si te atrapó:",
+        "guárdalo para verlo otra vez, compártelo en stories y dime en comentarios qué clásico ruso quieres después.",
+        "",
+        `${classic.hashtags} #reels #reelsenespanol #literatura`
+      ].join("\n")
+    },
+    tiktok: {
+      caption: [
+        `${shortHook}`,
+        `${socialBase}`,
+        "Sígueme para más poesía y prosa rusa en español.",
+        "Comenta el próximo autor y guarda este video si quieres segunda parte.",
+        `${classic.hashtags} #tiktokbooks #booktok #parati`
+      ].join("\n")
+    },
+    shared: {
+      caption: [
+        `${shortHook}`,
+        "",
+        `${socialBase}`,
+        `Contenido pensado para TikTok, Reels y Shorts sobre ${classic.author}.`,
+        "Sígueme, guarda este video y comenta qué clásico ruso quieres monetizar en la siguiente serie.",
+        "",
+        `${classic.hashtags} #booktok #reels #shorts`
+      ].join("\n")
+    }
+  };
 };
 
 // Upload video to a temporary public URL (required for Instagram Graph API fallback)
@@ -148,7 +217,7 @@ const publishToInstagram = async (videoUrl, caption) => {
 };
 
 // Publish video to YouTube Shorts (Fallback Mode)
-const publishToYouTube = async (filePath, title, description) => {
+const publishToYouTube = async (filePath, title, description, tags) => {
   const clientId = process.env.YOUTUBE_CLIENT_ID;
   const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
   const refreshToken = process.env.YOUTUBE_REFRESH_TOKEN;
@@ -177,7 +246,7 @@ const publishToYouTube = async (filePath, title, description) => {
       title: title.substring(0, 100),
       description: description,
       categoryId: "22",
-      tags: ["shorts", "literatura", "libros"]
+      tags: tags
     },
     status: {
       privacyStatus: "public",
@@ -225,6 +294,18 @@ const publishToYouTube = async (filePath, title, description) => {
   }
 };
 
+const publishWithSimplified = async (assetId, accountIds, caption, label) => {
+  if (!accountIds) {
+    return false;
+  }
+
+  const escapedDesc = caption.replace(/"/g, '\\"').replace(/\n/g, "\\n");
+  const postCmd = `simplified posts:create -c "${escapedDesc}" -a "${accountIds}" --asset-id "${assetId}" --action publish`;
+  const postRes = await runCommand(postCmd);
+  console.log(`✅ ¡Éxito! Publicación enviada a ${label}:`, postRes);
+  return true;
+};
+
 async function main() {
   const filePath = path.resolve("./dist/clasicos_corto_output.mp4");
   if (!fs.existsSync(filePath)) {
@@ -232,17 +313,21 @@ async function main() {
     process.exit(1);
   }
 
-  const classic = classicsData[0];
-  const title = `${classic.title} - ${classic.author}`;
-  const description = `¿Conocías este gran clásico de la literatura rusa? Escribe tu opinión en comentarios. 👇\n\n${classic.hashtags}`;
+  const requestedBookId = process.env.BOOK_ID || classicsData[0].id;
+  const requestedScriptIndex = Number.parseInt(process.env.SCRIPT_INDEX || "0", 10);
+  const classic = classicsData.find((item) => item.id === requestedBookId) || classicsData[0];
+  const script = classic.scripts[requestedScriptIndex] || classic.scripts[0];
+  const platformCopy = buildPlatformCopy(classic, script);
 
   const simplifiedKey = process.env.SIMPLIFIED_API_KEY;
-  const simplifiedAccounts = process.env.SIMPLIFIED_ACCOUNT_IDS; // comma-separated account IDs for TikTok, Reels, Shorts
+  const simplifiedAccounts = process.env.SIMPLIFIED_ACCOUNT_IDS;
+  const simplifiedTikTokAccounts = process.env.SIMPLIFIED_TIKTOK_ACCOUNT_IDS;
+  const simplifiedInstagramAccounts = process.env.SIMPLIFIED_INSTAGRAM_ACCOUNT_IDS;
+  const simplifiedYouTubeAccounts = process.env.SIMPLIFIED_YOUTUBE_ACCOUNT_IDS;
 
-  if (simplifiedKey && simplifiedAccounts) {
-    console.log("🚀 [UNIFICADO] Publicando a través de Simplified CLI (TikTok + Instagram + YouTube)...");
+  if (simplifiedKey && (simplifiedAccounts || simplifiedTikTokAccounts || simplifiedInstagramAccounts || simplifiedYouTubeAccounts)) {
+    console.log("🚀 Publicando con copies optimizados por plataforma...");
     try {
-      // Step 1: Import video file as workspace asset
       console.log("   - Importando video en la nube de Simplified...");
       const importRes = await runCommand(`simplified assets:import --path "${filePath}"`);
       const asset = JSON.parse(importRes);
@@ -253,12 +338,15 @@ async function main() {
       }
       console.log(`   - Recurso importado con éxito. ID: ${assetId}`);
 
-      // Step 2: Create post on all connected platforms
-      console.log("   - Creando la publicación multiplataforma...");
-      const escapedDesc = description.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-      const postCmd = `simplified posts:create -c "${escapedDesc}" -a "${simplifiedAccounts}" --asset-id "${assetId}" --action publish`;
-      const postRes = await runCommand(postCmd);
-      console.log("✅ ¡Éxito! Publicado simultáneamente en todos los canales:", postRes);
+      let usedPlatformSpecificPublishing = false;
+      usedPlatformSpecificPublishing = await publishWithSimplified(assetId, simplifiedTikTokAccounts, platformCopy.tiktok.caption, "TikTok") || usedPlatformSpecificPublishing;
+      usedPlatformSpecificPublishing = await publishWithSimplified(assetId, simplifiedInstagramAccounts, platformCopy.instagram.caption, "Instagram Reels") || usedPlatformSpecificPublishing;
+      usedPlatformSpecificPublishing = await publishWithSimplified(assetId, simplifiedYouTubeAccounts, platformCopy.youtube.description, "YouTube Shorts") || usedPlatformSpecificPublishing;
+
+      if (!usedPlatformSpecificPublishing && simplifiedAccounts) {
+        console.log("   - No hay cuentas separadas por plataforma; usando caption compartido.");
+        await publishWithSimplified(assetId, simplifiedAccounts, platformCopy.shared.caption, "cuentas conectadas");
+      }
     } catch (err) {
       console.error("❌ Error al publicar a través de Simplified CLI:", err.message);
     }
@@ -267,7 +355,12 @@ async function main() {
     
     // 1. YouTube Shorts (Direct)
     try {
-      await publishToYouTube(filePath, title, description);
+      await publishToYouTube(
+        filePath,
+        platformCopy.youtube.title,
+        platformCopy.youtube.description,
+        platformCopy.youtube.tags
+      );
     } catch (e) {
       console.error("❌ Error en YouTube:", e);
     }
@@ -275,9 +368,13 @@ async function main() {
     // 2. Instagram Reels (Direct)
     try {
       const tempUrl = await uploadToTempStorage(filePath);
-      await publishToInstagram(tempUrl, description);
+      await publishToInstagram(tempUrl, platformCopy.instagram.caption);
     } catch (e) {
       console.error("❌ Error en Instagram:", e);
+    }
+
+    if (!simplifiedKey) {
+      console.log("ℹ️ TikTok automático requiere Simplified con una cuenta TikTok conectada.");
     }
   }
   

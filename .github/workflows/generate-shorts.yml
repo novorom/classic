@@ -8,9 +8,13 @@ on:
     # Permite activar la generación del video de manera manual desde GitHub
     inputs:
       book_id:
-        description: 'ID de la obra a generar (e.g. crimen-y-castigo, guerra-y-paz)'
+        description: 'ID de la obra a generar (e.g. pushkin-yo-os-ame, dostoyevski-noches-blancas)'
         required: false
-        default: 'crimen-y-castigo'
+        default: 'pushkin-yo-os-ame'
+      script_index:
+        description: 'Índice del guion dentro de la obra (0 para la primera versión, 1 para la segunda)'
+        required: false
+        default: '0'
 
 jobs:
   build-and-generate:
@@ -38,7 +42,8 @@ jobs:
     - name: Generar Video (Español)
       run: node scripts/generate_video.js
       env:
-        BOOK_ID: ${{ github.event.inputs.book_id || 'crimen-y-castigo' }}
+        BOOK_ID: ${{ github.event.inputs.book_id || 'pushkin-yo-os-ame' }}
+        SCRIPT_INDEX: ${{ github.event.inputs.script_index || '0' }}
         EDGE_TTS_VOICE: es-ES-AlvaroNeural
 
     - name: Subir Video Generado como Artefacto
@@ -56,8 +61,13 @@ jobs:
       if: success()
       run: node scripts/publish.js
       env:
+        BOOK_ID: ${{ github.event.inputs.book_id || 'pushkin-yo-os-ame' }}
+        SCRIPT_INDEX: ${{ github.event.inputs.script_index || '0' }}
         SIMPLIFIED_API_KEY: ${{ secrets.SIMPLIFIED_API_KEY }}
         SIMPLIFIED_ACCOUNT_IDS: ${{ secrets.SIMPLIFIED_ACCOUNT_IDS }}
+        SIMPLIFIED_TIKTOK_ACCOUNT_IDS: ${{ secrets.SIMPLIFIED_TIKTOK_ACCOUNT_IDS }}
+        SIMPLIFIED_INSTAGRAM_ACCOUNT_IDS: ${{ secrets.SIMPLIFIED_INSTAGRAM_ACCOUNT_IDS }}
+        SIMPLIFIED_YOUTUBE_ACCOUNT_IDS: ${{ secrets.SIMPLIFIED_YOUTUBE_ACCOUNT_IDS }}
         YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
         YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
         YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
