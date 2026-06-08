@@ -46,10 +46,15 @@ jobs:
         path: dist/clasicos_corto_output.mp4
         retention-days: 7
 
-    - name: Publicar Video en YouTube Shorts e Instagram Reels
+    - name: Instalar Simplified CLI
+      run: npm install -g simplified-cli
+
+    - name: Publicar Video en Redes Sociales (TikTok, Reels, Shorts)
       if: success()
       run: node scripts/publish.js
       env:
+        SIMPLIFIED_API_KEY: ${{ secrets.SIMPLIFIED_API_KEY }}
+        SIMPLIFIED_ACCOUNT_IDS: ${{ secrets.SIMPLIFIED_ACCOUNT_IDS }}
         YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
         YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
         YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
