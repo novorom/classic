@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 export default function PhoneSimulator({ classic, activeScriptIndex }) {
   const script = classic.scripts[activeScriptIndex];
@@ -13,12 +13,13 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
   const oscillatorsRef = useRef([]);
   const gainNodeRef = useRef(null);
   const intervalRef = useRef(null);
+  const currentTimeRef = useRef(0);
 
   // Total duration based on last subtitle end time
   const totalDuration = subtitles[subtitles.length - 1].end;
 
   // Web Audio Synth for Atmospheric Background
-  const startSynth = () => {
+  const startSynth = useCallback(() => {
     if (!synthEnabled) return;
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -69,9 +70,9 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
     } catch (e) {
       console.error("Web Audio Synth failed to start:", e);
     }
-  };
+  }, [classic.soundProfile, synthEnabled]);
 
-  const stopSynth = () => {
+  const stopSynth = useCallback(() => {
     if (gainNodeRef.current && audioCtxRef.current) {
       try {
         const ctx = audioCtxRef.current;
@@ -83,8 +84,8 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
         setTimeout(() => {
           if (oscillatorsRef.current.length > 0) {
             oscillatorsRef.current.forEach(({ osc, lfo }) => {
-              try { osc.stop(); } catch(e) {}
-              try { lfo.stop(); } catch(e) {}
+              try { osc.stop(); } catch { /* ignore stop race */ }
+              try { lfo.stop(); } catch { /* ignore stop race */ }
             });
             oscillatorsRef.current = [];
           }
@@ -97,13 +98,17 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
         console.error(e);
       }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
 
   // Playback timer loop
   useEffect(() => {
     if (isPlaying) {
       startSynth();
-      const startTime = Date.now() - (currentTime * 1000);
+      const startTime = Date.now() - (currentTimeRef.current * 1000);
       intervalRef.current = setInterval(() => {
         const elapsed = (Date.now() - startTime) / 1000;
         if (elapsed >= totalDuration) {
@@ -123,13 +128,7 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       stopSynth();
     };
-  }, [isPlaying]);
-
-  // Reset timer on script/classic change
-  useEffect(() => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-  }, [classic, activeScriptIndex]);
+  }, [isPlaying, startSynth, stopSynth, totalDuration]);
 
   // Find active subtitle
   const activeSubtitle = subtitles.find(
@@ -152,7 +151,7 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
 
   // Heart & Comment simulator increments
   const [likes, setLikes] = useState(1284);
-  const [comments, setComments] = useState(89);
+  const comments = 89;
   const [liked, setLiked] = useState(false);
 
   const handleLike = () => {

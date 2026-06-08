@@ -1,19 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function ScriptEditor({ classic, activeScriptIndex, setActiveScriptIndex }) {
   const scripts = classic.scripts;
   const currentScript = scripts[activeScriptIndex];
   
-  const [editedText, setEditedText] = useState("");
+  const [editedText, setEditedText] = useState(() => currentScript.subtitles.map((s) => s.text).join("\n"));
   const [copied, setCopied] = useState(false);
-
-  // Initialize edited text when script/classic changes
-  useEffect(() => {
-    // Reconstruct single text script from subtitles
-    const fullText = currentScript.subtitles.map(s => s.text).join("\n");
-    setEditedText(fullText);
-    setCopied(false);
-  }, [classic, activeScriptIndex]);
 
   const handleCopy = () => {
     // Format text nicely for a teleprompter

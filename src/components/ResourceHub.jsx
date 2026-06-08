@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 export default function ResourceHub({ classic }) {
   const [copiedMeta, setCopiedMeta] = useState(false);
 
   const handleCopyMetadata = () => {
     const text = `📌 ${classic.title} - ${classic.author}\n\n` +
-                 `¿Conocías este gran clásico de la literatura rusa? Déjame saber tu opinión en comentarios. 👇\n\n` +
+                 `${classic.socialDescription}\n\n` +
                  `${classic.hashtags}`;
     navigator.clipboard.writeText(text);
     setCopiedMeta(true);
@@ -13,12 +13,12 @@ export default function ResourceHub({ classic }) {
   };
 
   const pronunciationData = [
-    { rus: "Фёдор Достоевский", esp: "Fiódor Dostoyevski", phonetics: "Fió-dor Dos-to-yév-skee", meaning: "Autor de Crimen y castigo" },
-    { rus: "Лев Толстой", esp: "Lev Tolstói", phonetics: "Léf Tal-stóy", meaning: "Autor de Guerra y paz" },
-    { rus: "Михаил Булгаков", esp: "Mijaíl Bulgákov", phonetics: "Mee-ja-éel Bool-gá-kof", meaning: "Autor de El maestro y Margarita" },
-    { rus: "Родион Раскольников", esp: "Rodión Raskólnikov", phonetics: "Ro-dión Ras-kól-nee-kof", meaning: "Protagonista de Crimen y castigo" },
-    { rus: "Пьер Безухов", esp: "Pierre Bezújov", phonetics: "Piair Be-zóo-jof", meaning: "Protagonista de Guerra y paz" },
-    { rus: "Бегемот", esp: "Behemot", phonetics: "Be-je-mót (con j suave)", meaning: "El gato demoníaco en Bulgákov" }
+    { rus: "Александр Пушкин", esp: "Aleksandr Pushkin", phonetics: "A-lek-sándr Push-kin", meaning: "Poeta central del romanticismo ruso" },
+    { rus: "Михаил Лермонтов", esp: "Mijaíl Lérmontov", phonetics: "Mee-ja-íl Lér-mon-tof", meaning: "Poeta de tono nocturno y filosófico" },
+    { rus: "Фёдор Тютчев", esp: "Fiódor Tiútchev", phonetics: "Fió-dor Tiút-chef", meaning: "Poeta del misterio interior" },
+    { rus: "Николай Гоголь", esp: "Nikolái Gógol", phonetics: "Nee-ko-lái Gó-gol", meaning: "Narrador satírico y social" },
+    { rus: "Антон Чехов", esp: "Antón Chéjov", phonetics: "An-tón Ché-jof", meaning: "Maestro del detalle emocional" },
+    { rus: "Фёдор Достоевский", esp: "Fiódor Dostoyevski", phonetics: "Fió-dor Dos-to-yév-skee", meaning: "Novelista de psicología y melancolía" }
   ];
 
   return (
@@ -45,7 +45,7 @@ export default function ResourceHub({ classic }) {
               </thead>
               <tbody>
                 {pronunciationData.map((item, index) => (
-                  <tr key={index} className={classic.author.includes(item.esp.split(" ")[1]) || classic.title.includes(item.meaning) ? "highlight-row" : ""}>
+                  <tr key={index} className={classic.author.includes(item.esp) ? "highlight-row" : ""}>
                     <td><strong>{item.esp}</strong> <span className="russian-char">{item.rus}</span></td>
                     <td><span className="phonetics-badge">{item.phonetics}</span></td>
                     <td>{item.meaning}</td>
@@ -65,7 +65,7 @@ export default function ResourceHub({ classic }) {
           <div className="metadata-box">
             <div className="metadata-preview">
               <strong>Descripción propuesta:</strong>
-              <p>¿Conocías este gran clásico de la literatura rusa? Déjame saber tu opinión en comentarios. 👇</p>
+              <p>{classic.socialDescription}</p>
               <strong>Hashtags recomendados:</strong>
               <p className="hashtags-list">{classic.hashtags}</p>
             </div>
@@ -81,8 +81,9 @@ export default function ResourceHub({ classic }) {
             <h5>💡 Consejos de Retención y Formato:</h5>
             <ul>
               <li><strong>Los 3 primeros segundos:</strong> La frase de gancho debe estar escrita en grande en la pantalla al iniciar el video. No saludes ni te presentes. ¡Entra directo al grano!</li>
-              <li><strong>Formato de Audio:</strong> Si usas la voz sintética, asegúrate de añadir la música clásica sugerida a volumen muy bajo (entre un 8% y 12%) para crear atmósfera.</li>
-              <li><strong>Final en bucle:</strong> El guion está diseñado para conectar de manera fluida el final con el inicio, lo que incrementa el tiempo de retención del espectador (bucle infinito).</li>
+              <li><strong>Ritmo visual:</strong> Cambia de plano cada 2 a 4 segundos, combina zoom lento, paneos suaves y texto grande para que el video siga vivo aunque el plano base sea una ilustración.</li>
+              <li><strong>Formato de Audio:</strong> Mantén la voz al frente y la música muy baja, entre un 8% y 12%, para que el texto mande y la atmósfera acompañe.</li>
+              <li><strong>Final en bucle:</strong> Cierra con una pregunta o una última línea que invite a volver al inicio; eso ayuda a la retención y mejora el rendimiento en plataformas.</li>
             </ul>
           </div>
         </div>

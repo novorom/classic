@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { classicsData } from "./data/classicsData";
 import PhoneSimulator from "./components/PhoneSimulator";
 import ScriptEditor from "./components/ScriptEditor";
@@ -21,7 +21,7 @@ function App() {
       <header className="app-header">
         <h1 className="app-logo">Clásicos en Corto</h1>
         <p className="app-subtitle">
-          Creador de Guiones y Simulador de Video para Redes Sociales — Literatura Rusa en Español
+          Guiones y vista previa para TikTok, Instagram Reels y YouTube Shorts de poesía y prosa rusa en español
         </p>
       </header>
 
@@ -31,7 +31,7 @@ function App() {
         <aside className="sidebar">
           <div className="card-premium">
             <h3 className="section-title">
-              <span className="sparkle">📚</span> Obras Clásicas
+              <span className="sparkle">📚</span> Biblioteca de Reels
             </h3>
             <div className="classics-list">
               {classicsData.map((classic, index) => (
@@ -55,11 +55,13 @@ function App() {
             {/* Phone Simulator and Script Editor Side-by-Side in PhoneSimulator component */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2rem" }}>
               <PhoneSimulator 
+                key={`${currentClassic.id}-${activeScriptIndex}-preview`}
                 classic={currentClassic} 
                 activeScriptIndex={activeScriptIndex} 
               />
               
               <ScriptEditor 
+                key={`${currentClassic.id}-${activeScriptIndex}-editor`}
                 classic={currentClassic}
                 activeScriptIndex={activeScriptIndex}
                 setActiveScriptIndex={setActiveScriptIndex}
