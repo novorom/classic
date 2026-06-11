@@ -11,6 +11,10 @@ on:
         description: 'ID de la obra a generar (e.g. crimen-y-castigo, guerra-y-paz)'
         required: false
         default: 'crimen-y-castigo'
+      script_index:
+        description: 'Índice del guion dentro de la obra (0, 1, 2...)'
+        required: false
+        default: '0'
 
 jobs:
   build-and-generate:
@@ -39,6 +43,7 @@ jobs:
       run: node scripts/generate_video.js
       env:
         BOOK_ID: ${{ github.event.inputs.book_id || 'crimen-y-castigo' }}
+        SCRIPT_INDEX: ${{ github.event.inputs.script_index || '0' }}
         # Aquí puedes agregar secrets en GitHub para servicios externos
         # ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
 
