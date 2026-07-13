@@ -4,7 +4,7 @@ import hashlib
 import logging
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from core.config import ProjectConfig
 from core.models.story import Story
@@ -53,10 +53,12 @@ class ImageEngine:
         output = self.image_dir / f"final_book_{digest}_titled.jpg"
         self.logger.info("Generating final book slide for %s", story.topic)
         prompt = (
-            "a single beautiful antique hardcover book standing upright and closed, "
-            "ornate embossed old leather cover with gold filigree and worn edges, "
-            f"19th century Russian book design, next to it {artifact}, {background}, "
-            "centered composition, warm candlelight, blank cover without readable letters"
+            "a single large antique book with its ornate embossed leather cover facing the camera, "
+            "the closed cover fills most of the vertical frame, only slightly tilted, "
+            "empty blank central panel framed by an ornate gold filigree border, "
+            "aged worn leather, 19th century Russian book design, "
+            f"{artifact} resting in a lower corner, {background}, warm candlelight, "
+            "centered symmetrical composition, no readable letters on the cover"
         )
         self.provider.generate_image(prompt, raw)
         if not verify_image(raw, self.config.video.size):
@@ -68,62 +70,71 @@ class ImageEngine:
         return FINAL_ARTIFACTS[digest[0] % len(FINAL_ARTIFACTS)]
 
     def _overlay_book_credits(self, src: Path, dst: Path, work: str, author: str) -> Path:
+        # Stamp the title/author directly onto the book cover as embossed gold
+        # lettering, centred where the cover fills the frame.
         image = Image.open(src).convert("RGBA")
         width, height = image.size
-        panel_width = int(width * 0.82)
-        title_font = self._serif_font(int(width * 0.072))
+        max_text_width = int(width * 0.66)
+        title_font = self._serif_font(int(width * 0.082))
         author_font = self._serif_font(int(width * 0.05), italic=True)
 
-        title_lines = self._wrap_by_width(work.upper(), title_font, panel_width - 90)
-        title_line_height = int(title_font.size * 1.16)
+        title_lines = self._wrap_by_width(work.upper(), title_font, max_text_width)
+        title_line_height = int(title_font.size * 1.14)
         author_line_height = int(author_font.size * 1.2)
-        separator_gap = int(height * 0.018)
+        gap = int(height * 0.02)
 
-        content_height = title_line_height * len(title_lines)
-        author_text = f"— {author} —" if author else ""
-        if author_text:
-            content_height += separator_gap + author_line_height
-        pad_y = 46
-        panel_height = content_height + pad_y * 2
-        panel_left = (width - panel_width) // 2
-        panel_top = int(height * 0.30) - panel_height // 2
+        block_height = title_line_height * len(title_lines)
+        if author:
+            block_height += gap * 2 + author_line_height
+        center_y = int(height * 0.40)
+        top = center_y - block_height // 2
 
-        overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(overlay)
-        panel = (panel_left, panel_top, panel_left + panel_width, panel_top + panel_height)
-        draw.rounded_rectangle(panel, radius=26, fill=(18, 12, 8, 205))
-        draw.rounded_rectangle(panel, radius=26, outline=(201, 162, 75, 255), width=4)
-        inset = (panel[0] + 12, panel[1] + 12, panel[2] - 12, panel[3] - 12)
-        draw.rounded_rectangle(inset, radius=18, outline=(201, 162, 75, 140), width=2)
-        image = Image.alpha_composite(image, overlay)
+        # Soft dark halo so gold text stays legible on any leather tone.
+        halo = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        halo_draw = ImageDraw.Draw(halo)
+        pad = int(width * 0.07)
+        halo_draw.ellipse(
+            [
+                width // 2 - max_text_width // 2 - pad,
+                top - pad,
+                width // 2 + max_text_width // 2 + pad,
+                top + block_height + pad,
+            ],
+            fill=(0, 0, 0, 120),
+        )
+        halo = halo.filter(ImageFilter.GaussianBlur(46))
+        image = Image.alpha_composite(image, halo)
 
         draw = ImageDraw.Draw(image)
-        y = panel_top + pad_y
+        y = top
         for line in title_lines:
-            draw.text(
-                (width // 2, y + title_line_height // 2),
-                line,
-                font=title_font,
-                anchor="mm",
-                fill="#F1E4C3",
-                stroke_fill="#0B0705",
-                stroke_width=4,
-            )
+            self._emboss_text(draw, width // 2, y + title_line_height // 2, line, title_font)
             y += title_line_height
-        if author_text:
-            y += separator_gap
-            draw.text(
-                (width // 2, y + author_line_height // 2),
-                author_text,
-                font=author_font,
-                anchor="mm",
-                fill="#D8BC7C",
-                stroke_fill="#0B0705",
-                stroke_width=3,
+        if author:
+            y += gap
+            rule_half = int(max_text_width * 0.26)
+            draw.line(
+                [(width // 2 - rule_half, y), (width // 2 + rule_half, y)],
+                fill=(214, 180, 112, 230),
+                width=3,
             )
+            y += gap
+            self._emboss_text(draw, width // 2, y + author_line_height // 2, author, author_font)
 
         image.convert("RGB").save(dst, quality=95, optimize=True)
         return dst
+
+    def _emboss_text(self, draw: ImageDraw.ImageDraw, cx: int, cy: int, text: str, font) -> None:
+        draw.text((cx + 3, cy + 4), text, font=font, anchor="mm", fill=(0, 0, 0, 190))
+        draw.text(
+            (cx, cy),
+            text,
+            font=font,
+            anchor="mm",
+            fill="#E9CB77",
+            stroke_fill="#3A2A12",
+            stroke_width=2,
+        )
 
     def _wrap_by_width(self, text: str, font, max_width: int) -> list[str]:
         words = text.split()
