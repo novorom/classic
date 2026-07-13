@@ -5,6 +5,7 @@ import logging
 import math
 import json
 import random
+import unicodedata
 import wave
 from pathlib import Path
 
@@ -13,6 +14,13 @@ import numpy as np
 from core.config import ProjectConfig
 
 _PITCH = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+
+
+def _normalize(text: str) -> str:
+    stripped = "".join(
+        c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)
+    )
+    return stripped.lower()
 
 
 def _note_to_midi(name: str) -> int:
@@ -41,26 +49,60 @@ class SoundEngine:
     # Short, recognizable motifs of Russian & Ukrainian classical works, all in the
     # public domain (composers deceased for well over 70 years). They are synthesized
     # on a piano voice — no external recordings are used, so there are no recording rights.
+    # Each entry: (id, spanish_name, motif, composer, culture). culture is "ru" or "ua"
+    # (Ukrainian affinity, used to match Ukrainian literary authors and Gogol).
     MELODIES = [
-        ("swan_lake", "El lago de los cisnes (Chaikovski)", "B4:1 F#4:1 B4:.5 C#5:.5 D5:1 C#5:.5 B4:.5 A#4:1"),
-        ("sugar_plum", "El hada de azúcar (Chaikovski)", "E5:.5 D#5:.5 E5:.5 B4:.5 D5:.5 C5:.5 A4:1"),
-        ("nutcracker_march", "Marcha de El cascanueces (Chaikovski)", "G4:.5 E4:.5 G4:.5 E4:.5 G4:.5 E4:.5 C5:1"),
-        ("flowers_waltz", "Vals de las flores (Chaikovski)", "A4:1 D5:2 F#5:1 A5:1 G5:1"),
-        ("promenade", "Cuadros de una exposición (Músorgski)", "G4:1 F4:1 Bb4:1 C5:1 F5:1 D5:.5 C5:.5 Bb4:1"),
-        ("bald_mountain", "Una noche en el Monte Pelado (Músorgski)", "D5:.5 C5:.5 Bb4:.5 A4:.5 G4:.5 F4:.5 E4:.5 D4:.5"),
-        ("bumblebee", "El vuelo del moscardón (Rimski-Kórsakov)", "A4:.25 G#4:.25 G4:.25 F#4:.25 F4:.25 E4:.25 D#4:.25 D4:.25 C#4:.25 C4:.25"),
-        ("scheherazade", "Scheherazade (Rimski-Kórsakov)", "E5:1 F#5:1 G5:.5 F#5:.5 E5:1 D5:1 B4:1"),
-        ("polovtsian", "Danzas polovtsianas (Borodín)", "F4:1 Ab4:1 Bb4:1 Db5:1.5 C5:.5 Bb4:1"),
-        ("rach_prelude", "Preludio en do sostenido menor (Rajmáninov)", "A3:1 G#3:1 C#4:2 r:.5 A3:1 G#3:1 C#4:2"),
-        ("rach_concerto2", "Concierto para piano n.º 2 (Rajmáninov)", "C4:1 F4:1 Ab4:1 C5:1 Db5:2"),
-        ("knights", "Danza de los caballeros (Prokófiev)", "E4:1 E4:.5 E4:.5 G4:1 F#4:1 E4:1 B4:1"),
-        ("peter_wolf", "Pedro y el lobo (Prokófiev)", "C5:.5 D5:.5 E5:.5 G5:.5 E5:.5 D5:.5 C5:1"),
-        ("ruslan", "Ruslán y Liudmila (Glinka)", "D5:.5 E5:.5 F#5:.5 G5:.5 A5:.5 B5:.5 A5:.5 G5:.5"),
-        ("schedryk", "Schedryk / Campanas (Leontóvych)", "A4:.5 G4:.5 A4:.5 F4:.5 A4:.5 G4:.5 A4:.5 F4:.5"),
-        ("lysenko", "Melodía ucraniana (Lysenko)", "A4:1 B4:1 C5:1 B4:.5 A4:.5 G4:1 A4:1"),
+        ("swan_lake", "El lago de los cisnes (Chaikovski)", "B4:1 F#4:1 B4:.5 C#5:.5 D5:1 C#5:.5 B4:.5 A#4:1", "chaikovski", "ru"),
+        ("sugar_plum", "El hada de azúcar (Chaikovski)", "E5:.5 D#5:.5 E5:.5 B4:.5 D5:.5 C5:.5 A4:1", "chaikovski", "ru"),
+        ("nutcracker_march", "Marcha de El cascanueces (Chaikovski)", "G4:.5 E4:.5 G4:.5 E4:.5 G4:.5 E4:.5 C5:1", "chaikovski", "ru"),
+        ("flowers_waltz", "Vals de las flores (Chaikovski)", "A4:1 D5:2 F#5:1 A5:1 G5:1", "chaikovski", "ru"),
+        ("sleeping_beauty", "La bella durmiente, vals (Chaikovski)", "A4:1 C#5:1 E5:1 D5:1 C#5:1 B4:1", "chaikovski", "ru"),
+        ("romeo_juliet", "Romeo y Julieta (Chaikovski)", "F4:1.5 Gb4:.5 Ab4:1 Db5:1 C5:1 Bb4:1 Ab4:1", "chaikovski", "ru"),
+        ("pathetique", "Sinfonía n.º 6 Patética (Chaikovski)", "F#4:1 E4:1 D4:1 E4:1 F#4:1 G4:1 A4:2", "chaikovski", "ru"),
+        ("seasons_june", "Barcarola, Junio (Chaikovski)", "G4:1 A4:1 Bb4:1.5 A4:.5 G4:1 F#4:1 G4:1", "chaikovski", "ru"),
+        ("overture_1812", "Obertura 1812 (Chaikovski)", "Eb5:1 D5:1 C5:1 Bb4:1 C5:1 Bb4:.5 Ab4:.5 G4:1", "chaikovski", "ru"),
+        ("promenade", "Cuadros de una exposición (Músorgski)", "G4:1 F4:1 Bb4:1 C5:1 F5:1 D5:.5 C5:.5 Bb4:1", "musorgski", "ua"),
+        ("great_gate", "La gran puerta de Kiev (Músorgski)", "Eb5:1.5 Eb5:.5 Eb5:1 Bb4:1 C5:1 Bb4:1 Ab4:1 G4:1", "musorgski", "ua"),
+        ("bald_mountain", "Una noche en el Monte Pelado (Músorgski)", "D5:.5 C5:.5 Bb4:.5 A4:.5 G4:.5 F4:.5 E4:.5 D4:.5", "musorgski", "ru"),
+        ("bumblebee", "El vuelo del moscardón (Rimski-Kórsakov)", "A4:.25 G#4:.25 G4:.25 F#4:.25 F4:.25 E4:.25 D#4:.25 D4:.25 C#4:.25 C4:.25", "rimski", "ru"),
+        ("scheherazade", "Scheherazade (Rimski-Kórsakov)", "E5:1 F#5:1 G5:.5 F#5:.5 E5:1 D5:1 B4:1", "rimski", "ru"),
+        ("song_of_india", "Canción de la India (Rimski-Kórsakov)", "B4:1 C5:1 D5:1 C5:.5 B4:.5 A#4:1 B4:1", "rimski", "ru"),
+        ("polovtsian", "Danzas polovtsianas (Borodín)", "F4:1 Ab4:1 Bb4:1 Db5:1.5 C5:.5 Bb4:1", "borodin", "ru"),
+        ("borodin_nocturne", "Nocturno, Cuarteto n.º 2 (Borodín)", "A4:1 B4:1 C#5:2 B4:1 A4:1 E4:1", "borodin", "ru"),
+        ("steppes", "En las estepas de Asia Central (Borodín)", "C5:2 D5:1 Eb5:1 D5:1 C5:1 Bb4:2", "borodin", "ru"),
+        ("rach_prelude", "Preludio en do sostenido menor (Rajmáninov)", "A3:1 G#3:1 C#4:2 r:.5 A3:1 G#3:1 C#4:2", "rajmaninov", "ru"),
+        ("rach_concerto2", "Concierto para piano n.º 2 (Rajmáninov)", "C4:1 F4:1 Ab4:1 C5:1 Db5:2", "rajmaninov", "ru"),
+        ("knights", "Danza de los caballeros (Prokófiev)", "E4:1 E4:.5 E4:.5 G4:1 F#4:1 E4:1 B4:1", "prokofiev", "ru"),
+        ("peter_wolf", "Pedro y el lobo (Prokófiev)", "C5:.5 D5:.5 E5:.5 G5:.5 E5:.5 D5:.5 C5:1", "prokofiev", "ru"),
+        ("ruslan", "Ruslán y Liudmila (Glinka)", "D5:.5 E5:.5 F#5:.5 G5:.5 A5:.5 B5:.5 A5:.5 G5:.5", "glinka", "ru"),
+        ("lark", "La alondra (Glinka)", "E5:1 D5:.5 C5:.5 B4:1 A4:1 B4:1 C5:1", "glinka", "ru"),
+        ("schedryk", "Schedryk / Campanas (Leontóvych)", "A4:.5 G4:.5 A4:.5 F4:.5 A4:.5 G4:.5 A4:.5 F4:.5", "leontovych", "ua"),
+        ("lysenko", "Melodía ucraniana (Lysenko)", "A4:1 B4:1 C5:1 B4:.5 A4:.5 G4:1 A4:1", "lysenko", "ua"),
+        ("prayer_ukraine", "Oración por Ucrania (Lysenko)", "G4:1 A4:1 B4:1 C5:1 B4:1 A4:1 G4:2", "lysenko", "ua"),
+        ("bortniansky", "Himno querubínico (Bortnianski)", "Bb4:1.5 C5:.5 D5:1 C5:1 Bb4:1 A4:1 Bb4:2", "bortniansky", "ua"),
     ]
     # Grander motifs reserved for the closing book slide.
-    FINALE_IDS = ["rach_concerto2", "knights", "polovtsian", "promenade", "swan_lake"]
+    FINALE_IDS = ["rach_concerto2", "knights", "polovtsian", "overture_1812", "swan_lake", "romeo_juliet"]
+    FINALE_UA_IDS = ["great_gate", "prayer_ukraine", "bortniansky", "polovtsian"]
+
+    # Ukrainian literary authors (and Gogol) get Ukrainian-affinity music first.
+    UKRAINIAN_AUTHOR_KEYS = [
+        "shevchenko", "franko", "frank", "ukrainka", "kotsiu", "kulish", "kobyl",
+        "stefanyk", "stus", "dziuba", "svitlich", "zemliak", "samchuk", "malaniuk",
+        "zabuzhko", "zhadan", "skovorod", "jvyliov", "hvyl", "yohansen", "polishchuk",
+        "barka", "tiutiunnyk", "andruj", "pidmoh", "domontov", "kostenko", "dovzhenko",
+        "antonych", "pluzhnyk", "zerov", "symonenko",
+    ]
+    GOGOL_KEYS = ["gogol", "hohol"]
+
+    # A few literary authors mapped to composers who famously set their work.
+    AUTHOR_COMPOSER_MAP = [
+        (["pushkin"], {"glinka", "rimski", "chaikovski"}),
+        (["chaikovski"], {"chaikovski"}),
+        (["chejov", "chekhov"], {"chaikovski", "rajmaninov"}),
+        (["tolstoi", "tolstoy"], {"chaikovski", "rajmaninov"}),
+        (["dostoyevski", "dostoievski", "dostoevski"], {"rajmaninov", "musorgski"}),
+    ]
 
     def __init__(self, config: ProjectConfig, logger: logging.Logger):
         self.config = config
@@ -135,20 +177,42 @@ class SoundEngine:
         if output_path.exists():
             meta_path.write_text(json.dumps({"fingerprint": fingerprint}, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    def _theme_order(self, salt: str) -> list[int]:
-        order = list(range(len(self.MELODIES)))
-        seed = int(hashlib.sha256(f"order|{salt}".encode("utf-8")).hexdigest(), 16)
-        random.Random(seed).shuffle(order)
-        return order
+    def _preferred_ids(self, salt: str) -> list[str]:
+        """IDs of themes whose composer/culture best matches the work's author."""
+        s = _normalize(salt)
+        if any(k in s for k in self.GOGOL_KEYS):
+            # Gogol: Ukrainian-born; Ukrainian themes plus Mussorgsky.
+            return [m[0] for m in self.MELODIES if m[4] == "ua" or m[3] == "musorgski"]
+        if any(k in s for k in self.UKRAINIAN_AUTHOR_KEYS):
+            return [m[0] for m in self.MELODIES if m[4] == "ua"]
+        for keys, composers in self.AUTHOR_COMPOSER_MAP:
+            if any(k in s for k in keys):
+                return [m[0] for m in self.MELODIES if m[3] in composers]
+        return []
 
-    def _theme_for(self, scene_index: int, salt: str, is_final_scene: bool) -> tuple[str, str, str]:
+    def _theme_order(self, salt: str) -> list[tuple]:
+        """Return themes ordered so author-matched ones lead, then the rest."""
+        seed = int(hashlib.sha256(f"order|{salt}".encode("utf-8")).hexdigest(), 16)
+        rnd = random.Random(seed)
+        by_id = {m[0]: m for m in self.MELODIES}
+        preferred = self._preferred_ids(salt)
+        rnd.shuffle(preferred)
+        rest = [m[0] for m in self.MELODIES if m[0] not in preferred]
+        rnd.shuffle(rest)
+        return [by_id[i] for i in (*preferred, *rest)]
+
+    def _theme_for(self, scene_index: int, salt: str, is_final_scene: bool) -> tuple:
         by_id = {m[0]: m for m in self.MELODIES}
         if is_final_scene:
+            s = _normalize(salt)
+            is_ua = any(k in s for k in self.GOGOL_KEYS) or any(
+                k in s for k in self.UKRAINIAN_AUTHOR_KEYS
+            )
+            finale_pool = self.FINALE_UA_IDS if is_ua else self.FINALE_IDS
             seed = int(hashlib.sha256(f"finale|{salt}".encode("utf-8")).hexdigest(), 16)
-            finale_id = self.FINALE_IDS[seed % len(self.FINALE_IDS)]
-            return by_id[finale_id]
+            return by_id[finale_pool[seed % len(finale_pool)]]
         order = self._theme_order(salt)
-        return self.MELODIES[order[scene_index % len(order)]]
+        return order[scene_index % len(order)]
 
     def _write_accent_fx(self, output_path: Path, scene_index: int, theme: tuple[str, str, str], is_final_scene: bool) -> None:
         sample_rate = 44_100
