@@ -152,19 +152,56 @@ class GeminiStoryProvider(StoryProvider):
         return templates[digest[0] % len(templates)]
 
     def _social_defaults(self, social: dict[str, Any], title: str) -> dict[str, Any]:
+        # Enhanced YouTube description with structure and CTA
+        youtube_description = social.get("youtube_description") or f"""
+📚 {title}
+
+En este video descubrirás los secretos de este clásico de la literatura rusa.
+
+🎯 Lo que encontrarás:
+✅ La trama principal
+✅ Curiosidades sobre el autor
+✅ Por qué este libro es un clásico
+
+📖 Si te gusta la literatura rusa, suscríbete al canal:
+@ClasicosEnCorto
+
+🔔 Activa la campanita para no perderte ningún video
+
+📱 Sígueme en redes:
+Instagram: @ClasicosEnCorto
+Twitter: @ClasicosEnCorto
+
+📚 Más videos de literatura rusa:
+#literaturarusa #clasicos #libros #educacion #cultura
+
+---
+Este video es para fines educativos. Todos los derechos reservados a sus respectivos autores.
+"""
+
         return {
             "youtube_title": social.get("youtube_title") or title[:58],
-            "youtube_description": social.get("youtube_description")
-            or f"{title}\n\n¿Ya lo habías leído? Comenta tu opinión.",
+            "youtube_description": youtube_description.strip(),
             "instagram_caption": social.get("instagram_caption")
-            or f"{title}. ¿Qué opinas tú?",
+            or f"{title}. ¿Qué opinas tú? 📚\n\n🔗 @ClasicosEnCorto",
             "tiktok_caption": social.get("tiktok_caption")
-            or f"{title}. ¿Lo leerías?",
+            or f"{title}. ¿Lo leerías? 📖\n\n🔗 @ClasicosEnCorto",
             "hashtags": social.get("hashtags")
             or [
                 "#literaturarusa",
-                "#libros",
-                "#clasicos",
+                "#dostoyevski",
+                "#tolstoi",
+                "#bulgakov",
+                "#clasicosliterarios",
+                "#resumendelibros",
+                "#analisisliterario",
+                "#librosrusos",
+                "#literaturaclasica",
+                "#educacion",
+                "#culturarusa",
+                "#historiadelaliteratura",
+                "#psicologiaenliteratura",
+                "#filosofiarusa",
                 "#booktok",
                 "#lectura",
                 "#shorts",
@@ -186,17 +223,46 @@ class GeminiStoryProvider(StoryProvider):
         ]
         social = SocialMetadata(
             youtube_title=f"El oscuro secreto detrás de {topic}"[:58],
-            youtube_description=(
-                f"Un recorrido breve por {topic}: la trama, la vida del autor y una idea que "
-                "sigue inquietando hoy.\n\n¿Ya lo habías leído? Comenta tu opinión."
-            ),
-            instagram_caption=f"{topic}. ¿El fin justifica los medios? #literaturarusa",
-            tiktok_caption=f"{topic}. La historia detrás del clásico. ¿Lo leerías?",
+            youtube_description=f"""📚 {topic}
+
+En este video descubrirás los secretos de este clásico de la literatura rusa.
+
+🎯 Lo que encontrarás:
+✅ La trama principal
+✅ Curiosidades sobre el autor
+✅ Por qué este libro es un clásico
+
+📖 Si te gusta la literatura rusa, suscríbete al canal:
+@ClasicosEnCorto
+
+🔔 Activa la campanita para no perderte ningún video
+
+📱 Sígueme en redes:
+Instagram: @ClasicosEnCorto
+Twitter: @ClasicosEnCorto
+
+📚 Más videos de literatura rusa:
+#literaturarusa #clasicos #libros #educacion #cultura
+
+---
+Este video es para fines educativos. Todos los derechos reservados a sus respectivos autores.""",
+            instagram_caption=f"{topic}. ¿El fin justifica los medios? 📚\n\n🔗 @ClasicosEnCorto",
+            tiktok_caption=f"{topic}. La historia detrás del clásico. ¿Lo leerías? 📖\n\n🔗 @ClasicosEnCorto",
             hashtags=[
                 "#literaturarusa",
-                "#libros",
-                "#clasicos",
                 "#dostoyevski",
+                "#tolstoi",
+                "#bulgakov",
+                "#clasicosliterarios",
+                "#resumendelibros",
+                "#analisisliterario",
+                "#librosrusos",
+                "#literaturaclasica",
+                "#educacion",
+                "#culturarusa",
+                "#historiadelaliteratura",
+                "#psicologiaenliteratura",
+                "#filosofiarusa",
                 "#booktok",
                 "#lectura",
                 "#shorts",
