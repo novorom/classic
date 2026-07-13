@@ -13,6 +13,19 @@ from core.config import ProjectConfig
 
 
 class SoundEngine:
+    # Chord progressions with a Russian romantic / classical feel (MIDI root, quality).
+    REGULAR_PROGRESSIONS = [
+        [(57, "min"), (62, "min")],  # Am -> Dm
+        [(57, "min"), (64, "maj")],  # Am -> E
+        [(62, "min"), (57, "min")],  # Dm -> Am
+        [(60, "maj"), (55, "maj")],  # C -> G
+        [(57, "min"), (53, "maj")],  # Am -> F
+        [(52, "min"), (57, "min")],  # Em -> Am
+        [(65, "maj"), (64, "maj")],  # F -> E
+        [(59, "dim"), (57, "min")],  # Bdim -> Am
+    ]
+    FINAL_PROGRESSION = [(57, "min"), (62, "min"), (64, "maj"), (57, "min")]  # Am - Dm - E - Am
+
     def __init__(self, config: ProjectConfig, logger: logging.Logger):
         self.config = config
         self.logger = logger
@@ -62,7 +75,7 @@ class SoundEngine:
 
     def prepare_final_stinger(self, scene_index: int, text: str, duration: float) -> Path:
         stinger_path = self.sound_dir / f"stinger_{scene_index:02}.wav"
-        stinger_fingerprint = self._fingerprint("stinger", scene_index, text, duration, True, "final_wail")
+        stinger_fingerprint = self._fingerprint("stinger", scene_index, text, duration, True, "final_chord")
         self._ensure_sound_file(
             stinger_path,
             stinger_fingerprint,
@@ -129,16 +142,19 @@ class SoundEngine:
 
     def _write_accent_fx(self, output_path: Path, duration: float, scene_index: int, text: str, style: str, is_final_scene: bool) -> None:
         sample_rate = 44_100
-        dur = duration * (self.config.audio.final_accent_tail_seconds / self.config.audio.accent_tail_seconds if is_final_scene else 1.0)
-        frames = max(int(sample_rate * dur), sample_rate // 2)
-        t = np.linspace(0.0, dur, frames, endpoint=False)
-        seed = int(hashlib.sha256(f"accent:{style}:{scene_index}:{text}".encode("utf-8")).hexdigest()[:8], 16)
-        rng = np.random.default_rng(seed)
+        if is_final_scene:
+            progression = self.FINAL_PROGRESSION
+            total = self.config.audio.final_accent_tail_seconds
+        else:
+            idx = (max(scene_index, 1) - 1) % len(self.REGULAR_PROGRESSIONS)
+            progression = self.REGULAR_PROGRESSIONS[idx]
+            total = self.config.audio.accent_tail_seconds
 
-        samples = self._accent_wave(style, t, rng, scene_index, is_final_scene)
-        envelope = self._accent_envelope(dur, sample_rate)
-        volume = self.config.audio.accent_volume * (self.config.audio.final_accent_multiplier if is_final_scene else 1.0)
-        samples = samples * envelope * volume
+        samples = self._render_chord_sequence(progression, total, sample_rate)
+        volume = self.config.audio.accent_volume * (
+            self.config.audio.final_accent_multiplier if is_final_scene else 1.0
+        )
+        samples = samples * volume
         self._write_pcm_wav(output_path, samples, sample_rate)
 
     def _write_whisper_layer(self, output_path: Path, duration: float, scene_index: int, text: str, is_final_scene: bool) -> None:
@@ -159,27 +175,9 @@ class SoundEngine:
     def _write_stinger_fx(self, output_path: Path, duration: float, scene_index: int, text: str) -> None:
         sample_rate = 44_100
         dur = self.config.audio.final_stinger_tail_seconds
-        frames = max(int(sample_rate * dur), sample_rate // 2)
-        t = np.linspace(0.0, dur, frames, endpoint=False)
-        seed = int(hashlib.sha256(f"stinger:{scene_index}:{text}".encode("utf-8")).hexdigest()[:8], 16)
-        rng = np.random.default_rng(seed)
-
-        # Enhanced scream for final scene
-        rise = np.linspace(320.0, 1800.0, frames)
-        scream = (
-            0.62 * np.sin(2 * math.pi * rise * t)
-            + 0.28 * np.sin(2 * math.pi * (rise * 2.1) * t)
-            + 0.35 * np.sin(2 * math.pi * (rise * 0.5) * t)
-            + 0.32 * rng.normal(size=frames)
-        )
-        tremor = 0.55 + 0.45 * np.sin(2 * math.pi * 12.0 * t)
-        impact = np.zeros(frames, dtype=np.float32)
-        impact_start = max(frames - int(sample_rate * min(dur, 0.42)), 0)
-        if impact_start < frames:
-            impact[impact_start:] = np.linspace(0.0, 1.0, frames - impact_start)
-        envelope = self._fade_envelope(dur, sample_rate, fade_in=0.02, fade_out=0.92)
-        samples = scream * tremor * impact * envelope * self.config.audio.final_stinger_volume
-        samples += 0.08 * rng.normal(size=frames) * envelope
+        # Warm resolving chord that closes the piece on the tonic (A minor).
+        samples = self._render_chord_sequence([(57, "min")], dur, sample_rate)
+        samples = samples * self.config.audio.final_stinger_volume
         self._write_pcm_wav(output_path, samples, sample_rate)
 
     def _fade_envelope(self, duration: float, sample_rate: int, fade_in: float, fade_out: float) -> np.ndarray:
@@ -216,119 +214,56 @@ class SoundEngine:
 
     def _accent_style(self, scene_index: int, text: str, is_final_scene: bool) -> str:
         if is_final_scene:
-            return "final_abyss"
-        palette = [
-            "ghoul_laugh",
-            "water_plunge",
-            "night_scream",
-            "chain_drag",
-            "shriek",
-            "bone_rattle",
-            "breath_rush",
-            "black_drift",
-            "wood_creak",
-            "metal_scrape",
-            "sub_boom",
-            "reverse_swell",
-            "bone_knock",
-            "bell_dread",
-            "breath_snap",
-        ]
-        if scene_index <= 0:
-            scene_index = 1
-        return palette[(scene_index - 1) % len(palette)]
+            return "final_cadence"
+        idx = (max(scene_index, 1) - 1) % len(self.REGULAR_PROGRESSIONS)
+        return f"chords_{idx}"
 
-    def _accent_wave(self, style: str, t: np.ndarray, rng: np.random.Generator, scene_index: int, is_final_scene: bool) -> np.ndarray:
-        if style == "wood_creak":
-            base = 150.0 - scene_index * 4.0
-            sweep = np.linspace(1.0, 0.45, len(t))
-            return 0.52 * np.sin(2 * math.pi * base * sweep * t) + 0.12 * rng.normal(size=len(t))
-        if style == "ghoul_laugh":
-            bursts = np.zeros_like(t)
-            centers = [0.12, 0.28, 0.48, 0.69, 0.86]
-            for i, center in enumerate(centers):
-                width = t[-1] * (0.016 + i * 0.001)
-                idx = np.abs(t - (t[-1] * center)) < width
-                if idx.any():
-                    tone = 210.0 + 48.0 * (i % 2)
-                    bursts[idx] += 0.34 * np.sin(2 * math.pi * tone * t[idx])
-                    bursts[idx] += 0.18 * np.sin(2 * math.pi * (tone * 1.9) * t[idx])
-            return bursts + 0.08 * rng.normal(size=len(t))
-        if style == "water_plunge":
-            drop = np.exp(-2.2 * (t / max(t[-1], 0.001)))
-            splash = 0.30 * np.sin(2 * math.pi * 36.0 * t) + 0.22 * np.sin(2 * math.pi * 71.0 * t)
-            bubbles = 0.18 * rng.normal(size=len(t))
-            return (splash + bubbles) * drop
-        if style == "night_scream":
-            sweep = np.linspace(180.0, 980.0, len(t))
-            body = 0.44 * np.sin(2 * math.pi * sweep * t)
-            edge = 0.25 * np.sin(2 * math.pi * (sweep * 1.55) * t)
-            return (body + edge + 0.16 * rng.normal(size=len(t))) * np.linspace(0.12, 1.0, len(t))
-        if style == "chain_drag":
-            grit = 0.28 * rng.normal(size=len(t))
-            scrape = 0.26 * np.sin(2 * math.pi * (290.0 - 120.0 * (t / max(t[-1], 0.001))) * t)
-            metallic = 0.16 * np.sin(2 * math.pi * 920.0 * t)
-            return grit + scrape + metallic
-        if style == "shriek":
-            sweep = np.linspace(720.0, 1600.0, len(t))
-            return (0.34 * np.sin(2 * math.pi * sweep * t) + 0.24 * rng.normal(size=len(t))) * np.linspace(0.2, 1.0, len(t))
-        if style == "bone_rattle":
-            knocks = np.zeros_like(t)
-            hits = (0.18, 0.38, 0.56, 0.74, 0.91)
-            for i, center in enumerate(hits):
-                idx = np.abs(t - (t[-1] * center)) < (t[-1] * 0.018)
-                knocks[idx] += 0.66 * np.sin(2 * math.pi * (88.0 - 3.0 * i) * t[idx])
-            return knocks + 0.06 * rng.normal(size=len(t))
-        if style == "breath_rush":
-            inhale = np.maximum(0.0, np.sin(2 * math.pi * 0.72 * t))
-            exhale = np.maximum(0.0, np.sin(2 * math.pi * 1.35 * t + 0.4))
-            hiss = 0.22 * rng.normal(size=len(t))
-            return 0.32 * inhale + 0.18 * exhale + hiss
-        if style == "metal_scrape":
-            burst = np.zeros_like(t)
-            burst[t > t[-1] * 0.15] = 0.45
-            burst[t > t[-1] * 0.55] = 0.2
-            return 0.42 * rng.normal(size=len(t)) * burst + 0.18 * np.sin(2 * math.pi * (320 - 140 * (t / max(t[-1], 0.001))) * t)
-        if style == "sub_boom":
-            freq = 48.0 if not is_final_scene else 30.0
-            decay = np.exp(-2.8 * (t / max(t[-1], 0.001)))
-            return (0.7 * np.sin(2 * math.pi * freq * t) + 0.18 * np.sin(2 * math.pi * 2 * freq * t)) * decay
-        if style == "reverse_swell":
-            reverse_env = np.linspace(0.15, 1.0, len(t))
-            return (0.34 * rng.normal(size=len(t)) + 0.22 * np.sin(2 * math.pi * 95.0 * t)) * reverse_env
-        if style == "bone_knock":
-            knocks = np.zeros_like(t)
-            for center, freq in ((0.22, 92.0), (0.48, 88.0), (0.74, 84.0), (0.92, 80.0)):
-                idx = np.abs(t - (t[-1] * center)) < (t[-1] * 0.022)
-                knocks[idx] += 0.72 * np.sin(2 * math.pi * freq * t[idx])
-            return knocks + 0.08 * rng.normal(size=len(t))
-        if style == "bell_dread":
-            bell = 0.26 * np.sin(2 * math.pi * 610.0 * t) + 0.26 * np.sin(2 * math.pi * 616.0 * t)
-            return bell * np.exp(-1.8 * (t / max(t[-1], 0.001)))
-        if style == "breath_snap":
-            inhale = np.maximum(0.0, np.sin(2 * math.pi * 0.95 * t))
-            gasp = np.maximum(0.0, np.sin(2 * math.pi * 2.9 * t))
-            return 0.34 * inhale + 0.18 * gasp + 0.14 * rng.normal(size=len(t))
-        if style == "black_drift":
-            drift = 0.28 * np.sin(2 * math.pi * 28.0 * t) + 0.16 * np.sin(2 * math.pi * 57.0 * t)
-            return drift + 0.1 * rng.normal(size=len(t))
-        if style == "final_abyss":
-            return (
-                0.65 * np.sin(2 * math.pi * 24.0 * t)
-                + 0.24 * np.sin(2 * math.pi * 17.0 * t)
-                + 0.22 * rng.normal(size=len(t))
-                + 0.18 * np.sin(2 * math.pi * (160.0 - 120.0 * (t / max(t[-1], 0.001))) * t)
-                + 0.15 * np.maximum(0.0, np.sin(2 * math.pi * 1.2 * t))
-            )
-        if style == "final_wail":
-            sweep = np.linspace(520.0, 140.0, len(t))
-            return (
-                0.58 * np.sin(2 * math.pi * sweep * t)
-                + 0.28 * np.sin(2 * math.pi * (sweep * 1.86) * t)
-                + 0.26 * rng.normal(size=len(t))
-                + 0.20 * np.maximum(0.0, np.sin(2 * math.pi * 5.5 * t))
-            )
-        return 0.25 * rng.normal(size=len(t))
+    def _note_freq(self, midi: int) -> float:
+        return 440.0 * (2.0 ** ((midi - 69) / 12.0))
+
+    def _chord_notes(self, root: int, quality: str) -> list[int]:
+        intervals = {"min": [0, 3, 7], "maj": [0, 4, 7], "dim": [0, 3, 6]}[quality]
+        return [root - 12] + [root + i for i in intervals]
+
+    def _piano_note(self, freq: float, t: np.ndarray) -> np.ndarray:
+        tone = (
+            1.00 * np.sin(2 * math.pi * freq * t)
+            + 0.45 * np.sin(2 * math.pi * 2 * freq * t)
+            + 0.22 * np.sin(2 * math.pi * 3 * freq * t)
+            + 0.11 * np.sin(2 * math.pi * 4 * freq * t)
+            + 0.05 * np.sin(2 * math.pi * 5 * freq * t)
+        )
+        env = np.exp(-3.2 * t)
+        attack = min(len(t), 220)  # ~5 ms at 44.1 kHz to avoid clicks
+        if attack > 1:
+            ramp = np.ones(len(t))
+            ramp[:attack] = np.linspace(0.0, 1.0, attack)
+            env = env * ramp
+        return tone * env
+
+    def _render_chord_sequence(self, progression, total_dur: float, sample_rate: int) -> np.ndarray:
+        frames_total = max(int(sample_rate * total_dur), sample_rate // 2)
+        out = np.zeros(frames_total, dtype=np.float64)
+        n = max(len(progression), 1)
+        seg = total_dur / n
+        for i, (root, quality) in enumerate(progression):
+            start = int(i * seg * sample_rate)
+            note_dur = min(total_dur - i * seg, seg * 1.85)
+            note_dur = max(note_dur, 0.25)
+            frames = max(int(note_dur * sample_rate), 1)
+            t = np.linspace(0.0, note_dur, frames, endpoint=False)
+            notes = self._chord_notes(root, quality)
+            chord = np.zeros(frames, dtype=np.float64)
+            for j, midi in enumerate(notes):
+                amp = 0.7 if j == 0 else 1.0  # bass note a touch softer
+                chord += amp * self._piano_note(self._note_freq(midi), t)
+            chord /= max(len(notes), 1)
+            end = min(start + frames, frames_total)
+            out[start:end] += chord[: end - start]
+        peak = float(np.max(np.abs(out))) if out.size else 0.0
+        if peak > 0:
+            out = out / peak * 0.9
+        return out.astype(np.float32)
 
     def _scene_needs_whisper(self, text: str, scene_index: int) -> bool:
         lowered = text.lower()
