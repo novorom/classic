@@ -56,10 +56,10 @@ story:
   scene_count: 8
   min_words_per_scene: 5
   max_words_per_scene: 14
-  # Clásicos rusos y ucranianos publicados antes de 1917 (o ambientados antes de
-  # 1917), ordenados aproximadamente por popularidad. El motor elige uno al azar.
+  # Clásicos rusos y ucranianos (prosa, teatro y poesía) de todas las épocas,
+  # ordenados aproximadamente por popularidad. El motor elige uno al azar.
   topics:
-    # --- Rusos ---
+    # --- Rusos (siglo XIX / clásicos) ---
     - "Crimen y castigo de Fiódor Dostoyevski"
     - "Guerra y paz de Lev Tolstói"
     - "Anna Karénina de Lev Tolstói"
@@ -128,6 +128,67 @@ story:
     - "Tierra de Olha Kobylianska"
     - "Relatos populares de Marko Vovchók"
     - "Fata Morgana de Mijaíl Kotsiubinski"
+    # --- Rusos (más clásicos del siglo XIX) ---
+    - "El adolescente de Fiódor Dostoyevski"
+    - "Humillados y ofendidos de Fiódor Dostoyevski"
+    - "Sin dote de Aleksandr Ostrovski"
+    - "El bosque de Aleksandr Ostrovski"
+    - "Historia de una ciudad de Mijaíl Saltykov-Shchedrín"
+    - "¿Qué hacer? de Nikolái Chernyshevski"
+    - "Crónica familiar de Serguéi Aksákov"
+    - "La flor roja de Vsévolod Garshin"
+    # --- Rusos (siglo XX) ---
+    - "El maestro y Margarita de Mijaíl Bulgákov"
+    - "Corazón de perro de Mijaíl Bulgákov"
+    - "La guardia blanca de Mijaíl Bulgákov"
+    - "El doctor Zhivago de Borís Pasternak"
+    - "El Don apacible de Mijaíl Shólojov"
+    - "Un día en la vida de Iván Denísovich de Aleksandr Solzhenitsyn"
+    - "Archipiélago Gulag de Aleksandr Solzhenitsyn"
+    - "Pabellón de cancerosos de Aleksandr Solzhenitsyn"
+    - "El primer círculo de Aleksandr Solzhenitsyn"
+    - "Nosotros de Yevgueni Zamiatin"
+    - "La excavación de Andréi Platónov"
+    - "Chevengur de Andréi Platónov"
+    - "Caballería roja de Isaak Bábel"
+    - "Cuentos de Odesa de Isaak Bábel"
+    - "Vida y destino de Vasili Grossman"
+    - "Relatos de Kolimá de Varlam Shalámov"
+    - "Las doce sillas de Ilyá Ilf y Yevgueni Petrov"
+    - "El becerro de oro de Ilyá Ilf y Yevgueni Petrov"
+    - "Envidia de Yuri Olesha"
+    - "Moscú-Petushkí de Venedikt Yeroféyev"
+    - "Lolita de Vladímir Nabókov"
+    - "La defensa de Luzhin de Vladímir Nabókov"
+    - "Invitación a una decapitación de Vladímir Nabókov"
+    # --- Poetas rusos ---
+    - "El jinete de bronce de Aleksandr Pushkin"
+    - "Ruslán y Liudmila de Aleksandr Pushkin"
+    - "Mtsyri de Mijaíl Lérmontov"
+    - "Fábulas de Iván Krylov"
+    - "¿Quién vive bien en Rusia? de Nikolái Nekrásov"
+    - "Los doce de Aleksandr Blok"
+    - "La nube en pantalones de Vladímir Mayakovski"
+    - "Réquiem de Anna Ajmátova"
+    - "Poema sin héroe de Anna Ajmátova"
+    - "Anna Snéguina de Serguéi Yesenin"
+    - "Poema del fin de Marina Tsvetáyeva"
+    - "Cuadernos de Vorónezh de Ósip Mandelshtam"
+    # --- Ucranianos (siglo XX) ---
+    - "La ciudad de Valerián Pidmohylny"
+    - "Los jinetes de Yuri Yanovsky"
+    - "La catedral de Oles Honchar"
+    - "El jardín de Getsemaní de Iván Bahriany"
+    - "Cazadores de tigres de Iván Bahriany"
+    - "La Desná encantada de Aleksandr Dovzhenko"
+    - "La máquina solar de Volodímir Vynnychenko"
+    - "El consejo negro de Panteleimón Kulish"
+    - "Cien mil de Iván Karpenko-Kary"
+    - "Martín Borulia de Iván Karpenko-Kary"
+    # --- Poetas ucranianos ---
+    - "El testamento de Tarás Shevchenko"
+    - "Clarinetes solares de Pavló Tychyna"
+    - "Marusia Churái de Lina Kostenko"
 
 audio:
   voice: "es-ES-AlvaroNeural"
