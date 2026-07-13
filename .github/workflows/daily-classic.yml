@@ -2,8 +2,8 @@ name: Daily Russian Classics Reel
 
 on:
   schedule:
-    # Run once a day at 8 PM UTC
-    - cron: '0 20 * * *'
+    # Run once a day at 6 PM UTC (8 PM GMT+2)
+    - cron: '0 18 * * *'
   workflow_dispatch:
     inputs:
       topic:
