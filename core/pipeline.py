@@ -93,7 +93,7 @@ class ClassicsPipeline:
         hook_duration = self.video_engine.audio_duration(hook_audio)
         durations.append(hook_duration)
         ambient_path, accent_path, whisper_path = self.sound_engine.prepare_scene_layers(
-            0, story.hook, hook_duration, is_final_scene=False
+            0, story.hook, hook_duration, is_final_scene=False, salt=story.topic
         )
         subtitle_image = self.subtitle_engine.burn(hook_image, story.hook, 0)
         assets.append(
@@ -118,7 +118,7 @@ class ClassicsPipeline:
             duration = self.video_engine.audio_duration(audio_path)
             durations.append(duration)
             ambient_path, accent_path, whisper_path = self.sound_engine.prepare_scene_layers(
-                scene_index, scene.text, duration, is_final_scene=False
+                scene_index, scene.text, duration, is_final_scene=False, salt=story.topic
             )
             subtitle_image = self.subtitle_engine.burn(image_path, scene.text, scene_index)
             assets.append(
@@ -142,9 +142,11 @@ class ClassicsPipeline:
         final_duration = self.video_engine.audio_duration(final_audio)
         durations.append(final_duration)
         ambient_path, accent_path, whisper_path = self.sound_engine.prepare_scene_layers(
-            9, story.ending_question, final_duration, is_final_scene=True
+            9, story.ending_question, final_duration, is_final_scene=True, salt=story.topic
         )
-        stinger_path = self.sound_engine.prepare_final_stinger(9, story.ending_question, final_duration)
+        stinger_path = self.sound_engine.prepare_final_stinger(
+            9, story.ending_question, final_duration, salt=story.topic
+        )
         subtitle_image = self.subtitle_engine.burn(final_image, story.ending_question, 9)
         assets.append(
             SceneAssets(

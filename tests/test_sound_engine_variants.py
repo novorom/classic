@@ -6,24 +6,41 @@ from core.config import ProjectConfig
 from core.engines.sound_engine import SoundEngine
 
 
-def test_sound_engine_uses_distinct_accent_styles(tmp_path):
+def test_sound_engine_uses_distinct_themes_per_slide(tmp_path):
     config = ProjectConfig.load("settings.yaml", load_env=False)
     config.root = tmp_path
     config.paths.cache = tmp_path / "cache"
     config.paths.cache.mkdir(parents=True, exist_ok=True)
     engine = SoundEngine(config, logging.getLogger("test"))
 
-    n = len(SoundEngine.REGULAR_PROGRESSIONS)
-    assert engine._accent_style(0, "El gancho", False) == "chords_0"
-    assert engine._accent_style(1, "La noche cae", False) == "chords_1"
-    assert engine._accent_style(2, "El agua tiembla", False) == "chords_2"
-    assert engine._accent_style(3, "Alguien grita", False) == "chords_3"
-    assert engine._accent_style(9, "El final", True) == "final_cadence"
+    salt = "Almas muertas de Nikolái Gógol"
+    # Every non-final slide (hook + 8 scenes) must use a distinct classical theme.
+    themes = [engine._theme_for(i, salt, False)[0] for i in range(0, 9)]
+    assert len(set(themes)) == len(themes)
+    assert len(SoundEngine.MELODIES) >= 10
 
-    # Every non-final slide (hook + 8 scenes) must use a distinct progression.
-    styles = [engine._accent_style(i, "x", False) for i in range(0, 9)]
-    assert len(set(styles)) == len(styles)
-    assert n >= 9
+
+def test_sound_engine_finale_uses_grand_theme(tmp_path):
+    config = ProjectConfig.load("settings.yaml", load_env=False)
+    config.root = tmp_path
+    config.paths.cache = tmp_path / "cache"
+    config.paths.cache.mkdir(parents=True, exist_ok=True)
+    engine = SoundEngine(config, logging.getLogger("test"))
+
+    theme = engine._theme_for(9, "Guerra y paz de Lev Tolstói", True)
+    assert theme[0] in SoundEngine.FINALE_IDS
+
+
+def test_sound_engine_theme_order_varies_per_topic(tmp_path):
+    config = ProjectConfig.load("settings.yaml", load_env=False)
+    config.root = tmp_path
+    config.paths.cache = tmp_path / "cache"
+    config.paths.cache.mkdir(parents=True, exist_ok=True)
+    engine = SoundEngine(config, logging.getLogger("test"))
+
+    a = [engine._theme_for(i, "Topic A", False)[0] for i in range(9)]
+    b = [engine._theme_for(i, "Topic B", False)[0] for i in range(9)]
+    assert a != b
 
 
 def test_sound_engine_can_build_final_stinger(tmp_path):
