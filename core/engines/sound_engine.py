@@ -4,6 +4,8 @@ import hashlib
 import logging
 import math
 import json
+import random
+import unicodedata
 import wave
 from pathlib import Path
 
@@ -11,8 +13,97 @@ import numpy as np
 
 from core.config import ProjectConfig
 
+_PITCH = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+
+
+def _normalize(text: str) -> str:
+    stripped = "".join(
+        c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)
+    )
+    return stripped.lower()
+
+
+def _note_to_midi(name: str) -> int:
+    letter = name[0].upper()
+    value = _PITCH[letter]
+    i = 1
+    while i < len(name) and name[i] in "#b":
+        value += 1 if name[i] == "#" else -1
+        i += 1
+    octave = int(name[i:])
+    return 12 * (octave + 1) + value
+
+
+def _parse_motif(spec: str) -> list[tuple[int | None, float]]:
+    """Parse 'B4:1 F#4:.5 r:.5' into [(midi, beats), (None, beats)]."""
+    notes: list[tuple[int | None, float]] = []
+    for token in spec.split():
+        name, _, beats = token.partition(":")
+        dur = float(beats) if beats else 1.0
+        midi = None if name == "r" else _note_to_midi(name)
+        notes.append((midi, dur))
+    return notes
+
 
 class SoundEngine:
+    # Short, recognizable motifs of Russian & Ukrainian classical works, all in the
+    # public domain (composers deceased for well over 70 years). They are synthesized
+    # on a piano voice — no external recordings are used, so there are no recording rights.
+    # Each entry: (id, spanish_name, motif, composer, culture). culture is "ru" or "ua"
+    # (Ukrainian affinity, used to match Ukrainian literary authors and Gogol).
+    MELODIES = [
+        ("swan_lake", "El lago de los cisnes (Chaikovski)", "B4:1 F#4:1 B4:.5 C#5:.5 D5:1 C#5:.5 B4:.5 A#4:1", "chaikovski", "ru"),
+        ("sugar_plum", "El hada de azúcar (Chaikovski)", "E5:.5 D#5:.5 E5:.5 B4:.5 D5:.5 C5:.5 A4:1", "chaikovski", "ru"),
+        ("nutcracker_march", "Marcha de El cascanueces (Chaikovski)", "G4:.5 E4:.5 G4:.5 E4:.5 G4:.5 E4:.5 C5:1", "chaikovski", "ru"),
+        ("flowers_waltz", "Vals de las flores (Chaikovski)", "A4:1 D5:2 F#5:1 A5:1 G5:1", "chaikovski", "ru"),
+        ("sleeping_beauty", "La bella durmiente, vals (Chaikovski)", "A4:1 C#5:1 E5:1 D5:1 C#5:1 B4:1", "chaikovski", "ru"),
+        ("romeo_juliet", "Romeo y Julieta (Chaikovski)", "F4:1.5 Gb4:.5 Ab4:1 Db5:1 C5:1 Bb4:1 Ab4:1", "chaikovski", "ru"),
+        ("pathetique", "Sinfonía n.º 6 Patética (Chaikovski)", "F#4:1 E4:1 D4:1 E4:1 F#4:1 G4:1 A4:2", "chaikovski", "ru"),
+        ("seasons_june", "Barcarola, Junio (Chaikovski)", "G4:1 A4:1 Bb4:1.5 A4:.5 G4:1 F#4:1 G4:1", "chaikovski", "ru"),
+        ("overture_1812", "Obertura 1812 (Chaikovski)", "Eb5:1 D5:1 C5:1 Bb4:1 C5:1 Bb4:.5 Ab4:.5 G4:1", "chaikovski", "ru"),
+        ("promenade", "Cuadros de una exposición (Músorgski)", "G4:1 F4:1 Bb4:1 C5:1 F5:1 D5:.5 C5:.5 Bb4:1", "musorgski", "ua"),
+        ("great_gate", "La gran puerta de Kiev (Músorgski)", "Eb5:1.5 Eb5:.5 Eb5:1 Bb4:1 C5:1 Bb4:1 Ab4:1 G4:1", "musorgski", "ua"),
+        ("bald_mountain", "Una noche en el Monte Pelado (Músorgski)", "D5:.5 C5:.5 Bb4:.5 A4:.5 G4:.5 F4:.5 E4:.5 D4:.5", "musorgski", "ru"),
+        ("bumblebee", "El vuelo del moscardón (Rimski-Kórsakov)", "A4:.25 G#4:.25 G4:.25 F#4:.25 F4:.25 E4:.25 D#4:.25 D4:.25 C#4:.25 C4:.25", "rimski", "ru"),
+        ("scheherazade", "Scheherazade (Rimski-Kórsakov)", "E5:1 F#5:1 G5:.5 F#5:.5 E5:1 D5:1 B4:1", "rimski", "ru"),
+        ("song_of_india", "Canción de la India (Rimski-Kórsakov)", "B4:1 C5:1 D5:1 C5:.5 B4:.5 A#4:1 B4:1", "rimski", "ru"),
+        ("polovtsian", "Danzas polovtsianas (Borodín)", "F4:1 Ab4:1 Bb4:1 Db5:1.5 C5:.5 Bb4:1", "borodin", "ru"),
+        ("borodin_nocturne", "Nocturno, Cuarteto n.º 2 (Borodín)", "A4:1 B4:1 C#5:2 B4:1 A4:1 E4:1", "borodin", "ru"),
+        ("steppes", "En las estepas de Asia Central (Borodín)", "C5:2 D5:1 Eb5:1 D5:1 C5:1 Bb4:2", "borodin", "ru"),
+        ("rach_prelude", "Preludio en do sostenido menor (Rajmáninov)", "A3:1 G#3:1 C#4:2 r:.5 A3:1 G#3:1 C#4:2", "rajmaninov", "ru"),
+        ("rach_concerto2", "Concierto para piano n.º 2 (Rajmáninov)", "C4:1 F4:1 Ab4:1 C5:1 Db5:2", "rajmaninov", "ru"),
+        ("knights", "Danza de los caballeros (Prokófiev)", "E4:1 E4:.5 E4:.5 G4:1 F#4:1 E4:1 B4:1", "prokofiev", "ru"),
+        ("peter_wolf", "Pedro y el lobo (Prokófiev)", "C5:.5 D5:.5 E5:.5 G5:.5 E5:.5 D5:.5 C5:1", "prokofiev", "ru"),
+        ("ruslan", "Ruslán y Liudmila (Glinka)", "D5:.5 E5:.5 F#5:.5 G5:.5 A5:.5 B5:.5 A5:.5 G5:.5", "glinka", "ru"),
+        ("lark", "La alondra (Glinka)", "E5:1 D5:.5 C5:.5 B4:1 A4:1 B4:1 C5:1", "glinka", "ru"),
+        ("schedryk", "Schedryk / Campanas (Leontóvych)", "A4:.5 G4:.5 A4:.5 F4:.5 A4:.5 G4:.5 A4:.5 F4:.5", "leontovych", "ua"),
+        ("lysenko", "Melodía ucraniana (Lysenko)", "A4:1 B4:1 C5:1 B4:.5 A4:.5 G4:1 A4:1", "lysenko", "ua"),
+        ("prayer_ukraine", "Oración por Ucrania (Lysenko)", "G4:1 A4:1 B4:1 C5:1 B4:1 A4:1 G4:2", "lysenko", "ua"),
+        ("bortniansky", "Himno querubínico (Bortnianski)", "Bb4:1.5 C5:.5 D5:1 C5:1 Bb4:1 A4:1 Bb4:2", "bortniansky", "ua"),
+    ]
+    # Grander motifs reserved for the closing book slide.
+    FINALE_IDS = ["rach_concerto2", "knights", "polovtsian", "overture_1812", "swan_lake", "romeo_juliet"]
+    FINALE_UA_IDS = ["great_gate", "prayer_ukraine", "bortniansky", "polovtsian"]
+
+    # Ukrainian literary authors (and Gogol) get Ukrainian-affinity music first.
+    UKRAINIAN_AUTHOR_KEYS = [
+        "shevchenko", "franko", "frank", "ukrainka", "kotsiu", "kulish", "kobyl",
+        "stefanyk", "stus", "dziuba", "svitlich", "zemliak", "samchuk", "malaniuk",
+        "zabuzhko", "zhadan", "skovorod", "jvyliov", "hvyl", "yohansen", "polishchuk",
+        "barka", "tiutiunnyk", "andruj", "pidmoh", "domontov", "kostenko", "dovzhenko",
+        "antonych", "pluzhnyk", "zerov", "symonenko",
+    ]
+    GOGOL_KEYS = ["gogol", "hohol"]
+
+    # A few literary authors mapped to composers who famously set their work.
+    AUTHOR_COMPOSER_MAP = [
+        (["pushkin"], {"glinka", "rimski", "chaikovski"}),
+        (["chaikovski"], {"chaikovski"}),
+        (["chejov", "chekhov"], {"chaikovski", "rajmaninov"}),
+        (["tolstoi", "tolstoy"], {"chaikovski", "rajmaninov"}),
+        (["dostoyevski", "dostoievski", "dostoevski"], {"rajmaninov", "musorgski"}),
+    ]
+
     def __init__(self, config: ProjectConfig, logger: logging.Logger):
         self.config = config
         self.logger = logger
@@ -26,47 +117,28 @@ class SoundEngine:
         duration: float,
         *,
         is_final_scene: bool = False,
-    ) -> tuple[Path, Path, Path | None]:
-        ambient_path = self.sound_dir / f"ambient_{scene_index:02}.wav"
+        salt: str = "",
+    ) -> tuple[Path | None, Path, Path | None]:
+        # Only the classical-music accent is produced; the horror-era ambient
+        # drone and whisper layers have been removed.
         accent_path = self.sound_dir / f"accent_{scene_index:02}.wav"
-        whisper_path = self.sound_dir / f"whisper_{scene_index:02}.wav"
-        ambient_fingerprint = self._fingerprint("ambient", scene_index, text, duration, is_final_scene)
-        accent_style = self._accent_style(scene_index, text, is_final_scene)
-        accent_fingerprint = self._fingerprint("accent", scene_index, text, duration, is_final_scene, accent_style)
-        whisper_enabled = self._scene_needs_whisper(text, scene_index)
-        whisper_fingerprint = self._fingerprint("whisper", scene_index, text, duration, is_final_scene)
-
-        self._ensure_sound_file(
-            ambient_path,
-            ambient_fingerprint,
-            lambda path: self._write_ambient_bed(path, duration, scene_index, text, is_final_scene),
-        )
+        theme = self._theme_for(scene_index, salt, is_final_scene)
+        accent_style = theme[0]
+        accent_fingerprint = self._fingerprint("accent", scene_index, text, duration, is_final_scene, f"{salt}|{accent_style}")
         self._ensure_sound_file(
             accent_path,
             accent_fingerprint,
-            lambda path: self._write_accent_fx(path, self.config.audio.accent_tail_seconds, scene_index, text, accent_style, is_final_scene),
+            lambda path: self._write_accent_fx(path, scene_index, theme, is_final_scene),
         )
-        if whisper_enabled:
-            whisper_tail = (
-                self.config.audio.final_whisper_tail_seconds
-                if is_final_scene
-                else self.config.audio.whisper_tail_seconds * 1.05
-            )
-            self._ensure_sound_file(
-                whisper_path,
-                whisper_fingerprint,
-                lambda path: self._write_whisper_layer(path, whisper_tail, scene_index, text, is_final_scene),
-            )
+        return None, accent_path, None
 
-        return ambient_path, accent_path, whisper_path if whisper_enabled else None
-
-    def prepare_final_stinger(self, scene_index: int, text: str, duration: float) -> Path:
+    def prepare_final_stinger(self, scene_index: int, text: str, duration: float, *, salt: str = "") -> Path:
         stinger_path = self.sound_dir / f"stinger_{scene_index:02}.wav"
-        stinger_fingerprint = self._fingerprint("stinger", scene_index, text, duration, True, "final_wail")
+        stinger_fingerprint = self._fingerprint("stinger", scene_index, text, duration, True, f"{salt}|final_chord")
         self._ensure_sound_file(
             stinger_path,
             stinger_fingerprint,
-            lambda path: self._write_stinger_fx(path, self.config.audio.final_stinger_tail_seconds, scene_index, text),
+            lambda path: self._write_stinger_fx(path),
         )
         return stinger_path
 
@@ -81,11 +153,10 @@ class SoundEngine:
                 variant,
                 str(self.config.audio.music_volume),
                 str(self.config.audio.accent_volume),
-                str(self.config.audio.whisper_volume),
                 str(self.config.audio.final_accent_multiplier),
-                str(self.config.audio.final_whisper_multiplier),
+                str(self.config.audio.accent_tail_seconds),
+                str(self.config.audio.final_accent_tail_seconds),
                 str(self.config.audio.final_stinger_tail_seconds),
-                str(self.config.audio.final_stinger_gap_seconds),
                 str(self.config.audio.final_stinger_volume),
             ]
         )
@@ -106,253 +177,145 @@ class SoundEngine:
         if output_path.exists():
             meta_path.write_text(json.dumps({"fingerprint": fingerprint}, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    def _write_ambient_bed(self, output_path: Path, duration: float, scene_index: int, text: str, is_final_scene: bool) -> None:
-        sample_rate = 44_100
-        frames = max(int(sample_rate * duration), sample_rate)
-        t = np.linspace(0.0, duration, frames, endpoint=False)
-        seed = int(hashlib.sha256(f"{scene_index}:{text}".encode("utf-8")).hexdigest()[:8], 16)
-        rng = np.random.default_rng(seed)
+    def _preferred_ids(self, salt: str) -> list[str]:
+        """IDs of themes whose composer/culture best matches the work's author."""
+        s = _normalize(salt)
+        if any(k in s for k in self.GOGOL_KEYS):
+            # Gogol: Ukrainian-born; Ukrainian themes plus Mussorgsky.
+            return [m[0] for m in self.MELODIES if m[4] == "ua" or m[3] == "musorgski"]
+        if any(k in s for k in self.UKRAINIAN_AUTHOR_KEYS):
+            return [m[0] for m in self.MELODIES if m[4] == "ua"]
+        for keys, composers in self.AUTHOR_COMPOSER_MAP:
+            if any(k in s for k in keys):
+                return [m[0] for m in self.MELODIES if m[3] in composers]
+        return []
 
-        base_hz = self.config.audio.ambient_base_hz
-        drone = (
-            0.26 * np.sin(2 * math.pi * base_hz * t)
-            + 0.14 * np.sin(2 * math.pi * (base_hz * 1.42) * t)
-            + 0.08 * np.sin(2 * math.pi * (base_hz * 2.07) * t)
+    def _theme_order(self, salt: str) -> list[tuple]:
+        """Return themes ordered so author-matched ones lead, then the rest."""
+        seed = int(hashlib.sha256(f"order|{salt}".encode("utf-8")).hexdigest(), 16)
+        rnd = random.Random(seed)
+        by_id = {m[0]: m for m in self.MELODIES}
+        preferred = self._preferred_ids(salt)
+        rnd.shuffle(preferred)
+        rest = [m[0] for m in self.MELODIES if m[0] not in preferred]
+        rnd.shuffle(rest)
+        return [by_id[i] for i in (*preferred, *rest)]
+
+    def _theme_for(self, scene_index: int, salt: str, is_final_scene: bool) -> tuple:
+        by_id = {m[0]: m for m in self.MELODIES}
+        if is_final_scene:
+            s = _normalize(salt)
+            is_ua = any(k in s for k in self.GOGOL_KEYS) or any(
+                k in s for k in self.UKRAINIAN_AUTHOR_KEYS
+            )
+            finale_pool = self.FINALE_UA_IDS if is_ua else self.FINALE_IDS
+            seed = int(hashlib.sha256(f"finale|{salt}".encode("utf-8")).hexdigest(), 16)
+            return by_id[finale_pool[seed % len(finale_pool)]]
+        order = self._theme_order(salt)
+        return order[scene_index % len(order)]
+
+    def _write_accent_fx(self, output_path: Path, scene_index: int, theme: tuple[str, str, str], is_final_scene: bool) -> None:
+        sample_rate = 44_100
+        total = (
+            self.config.audio.final_accent_tail_seconds
+            if is_final_scene
+            else self.config.audio.accent_tail_seconds
         )
-        hiss = 0.025 * rng.normal(size=frames)
-        pulse_rate = 0.06 + (0.02 if is_final_scene else 0.0)
-        pulse = 0.48 + 0.52 * np.sin(2 * math.pi * pulse_rate * t + scene_index)
-        envelope = self._ducking_envelope(duration, sample_rate)
-        final_boost = 1.12 if is_final_scene else 1.0
-        samples = (drone * pulse + hiss) * envelope * self.config.audio.music_volume * final_boost
+        motif = _parse_motif(theme[2])
+        samples = self._render_melody(motif, total, sample_rate)
+        volume = self.config.audio.accent_volume * (
+            self.config.audio.final_accent_multiplier if is_final_scene else 1.0
+        )
+        samples = samples * volume
         self._write_pcm_wav(output_path, samples, sample_rate)
 
-    def _write_accent_fx(self, output_path: Path, duration: float, scene_index: int, text: str, style: str, is_final_scene: bool) -> None:
-        sample_rate = 44_100
-        dur = duration * (self.config.audio.final_accent_tail_seconds / self.config.audio.accent_tail_seconds if is_final_scene else 1.0)
-        frames = max(int(sample_rate * dur), sample_rate // 2)
-        t = np.linspace(0.0, dur, frames, endpoint=False)
-        seed = int(hashlib.sha256(f"accent:{style}:{scene_index}:{text}".encode("utf-8")).hexdigest()[:8], 16)
-        rng = np.random.default_rng(seed)
-
-        samples = self._accent_wave(style, t, rng, scene_index, is_final_scene)
-        envelope = self._accent_envelope(dur, sample_rate)
-        volume = self.config.audio.accent_volume * (self.config.audio.final_accent_multiplier if is_final_scene else 1.0)
-        samples = samples * envelope * volume
-        self._write_pcm_wav(output_path, samples, sample_rate)
-
-    def _write_whisper_layer(self, output_path: Path, duration: float, scene_index: int, text: str, is_final_scene: bool) -> None:
-        sample_rate = 44_100
-        dur = duration * (1.4 if is_final_scene else 1.0)
-        frames = max(int(sample_rate * dur), sample_rate // 2)
-        t = np.linspace(0.0, dur, frames, endpoint=False)
-        seed = int(hashlib.sha256(f"whisper:{scene_index}:{text}:{is_final_scene}".encode("utf-8")).hexdigest()[:8], 16)
-        rng = np.random.default_rng(seed)
-        hiss = rng.normal(size=frames)
-        flutter = 0.5 + 0.5 * np.sin(2 * math.pi * (3.2 + (0.7 if is_final_scene else 0.0)) * t + scene_index)
-        breath = np.maximum(0.0, np.sin(2 * math.pi * (0.85 + (0.2 if is_final_scene else 0.0)) * t))
-        envelope = self._accent_envelope(dur, sample_rate)
-        volume = self.config.audio.whisper_volume * (self.config.audio.final_whisper_multiplier if is_final_scene else 1.0)
-        samples = (0.34 * hiss * flutter + 0.12 * breath) * envelope * volume
-        self._write_pcm_wav(output_path, samples, sample_rate)
-
-    def _write_stinger_fx(self, output_path: Path, duration: float, scene_index: int, text: str) -> None:
+    def _write_stinger_fx(self, output_path: Path) -> None:
         sample_rate = 44_100
         dur = self.config.audio.final_stinger_tail_seconds
-        frames = max(int(sample_rate * dur), sample_rate // 2)
-        t = np.linspace(0.0, dur, frames, endpoint=False)
-        seed = int(hashlib.sha256(f"stinger:{scene_index}:{text}".encode("utf-8")).hexdigest()[:8], 16)
-        rng = np.random.default_rng(seed)
-
-        # Enhanced scream for final scene
-        rise = np.linspace(320.0, 1800.0, frames)
-        scream = (
-            0.62 * np.sin(2 * math.pi * rise * t)
-            + 0.28 * np.sin(2 * math.pi * (rise * 2.1) * t)
-            + 0.35 * np.sin(2 * math.pi * (rise * 0.5) * t)
-            + 0.32 * rng.normal(size=frames)
-        )
-        tremor = 0.55 + 0.45 * np.sin(2 * math.pi * 12.0 * t)
-        impact = np.zeros(frames, dtype=np.float32)
-        impact_start = max(frames - int(sample_rate * min(dur, 0.42)), 0)
-        if impact_start < frames:
-            impact[impact_start:] = np.linspace(0.0, 1.0, frames - impact_start)
-        envelope = self._fade_envelope(dur, sample_rate, fade_in=0.02, fade_out=0.92)
-        samples = scream * tremor * impact * envelope * self.config.audio.final_stinger_volume
-        samples += 0.08 * rng.normal(size=frames) * envelope
+        # Warm resolving chord that closes the piece on the tonic (A minor).
+        samples = self._render_chord_sequence([(57, "min")], dur, sample_rate)
+        samples = samples * self.config.audio.final_stinger_volume
         self._write_pcm_wav(output_path, samples, sample_rate)
 
-    def _fade_envelope(self, duration: float, sample_rate: int, fade_in: float, fade_out: float) -> np.ndarray:
-        frames = max(int(sample_rate * duration), sample_rate)
-        env = np.ones(frames, dtype=np.float32)
-        fade_in_frames = min(int(sample_rate * fade_in), frames)
-        fade_out_frames = min(int(sample_rate * fade_out), frames)
-        if fade_in_frames > 1:
-            env[:fade_in_frames] = np.linspace(0.0, 1.0, fade_in_frames)
-        if fade_out_frames > 1:
-            env[-fade_out_frames:] *= np.linspace(1.0, 0.0, fade_out_frames)
-        return env
+    def _note_freq(self, midi: int) -> float:
+        return 440.0 * (2.0 ** ((midi - 69) / 12.0))
 
-    def _ducking_envelope(self, duration: float, sample_rate: int) -> np.ndarray:
-        frames = max(int(sample_rate * duration), sample_rate)
-        env = np.full(frames, self.config.audio.voice_ducking_floor, dtype=np.float32)
-        rise_frames = max(int(sample_rate * min(duration, self.config.audio.voice_ducking_rise)), 1)
-        if rise_frames > 1:
-            env[:rise_frames] = np.linspace(self.config.audio.voice_ducking_floor, 1.0, rise_frames)
-        return env
+    def _chord_notes(self, root: int, quality: str) -> list[int]:
+        intervals = {"min": [0, 3, 7], "maj": [0, 4, 7], "dim": [0, 3, 6]}[quality]
+        return [root - 12] + [root + i for i in intervals]
 
-    def _accent_envelope(self, duration: float, sample_rate: int) -> np.ndarray:
-        frames = max(int(sample_rate * duration), sample_rate // 2)
-        env = np.zeros(frames, dtype=np.float32)
-        tail_frames = max(int(sample_rate * min(duration, self.config.audio.accent_tail_seconds)), 1)
-        start = max(frames - tail_frames, 0)
-        if start < frames:
-            attack = max(int(tail_frames * 0.45), 1)
-            sustain = max(tail_frames - attack, 1)
-            env[start : start + attack] = np.linspace(0.0, 1.0, attack)
-            if start + attack < frames:
-                env[start + attack : start + attack + sustain] = np.linspace(1.0, 0.35, min(sustain, frames - (start + attack)))
-        return env
-
-    def _accent_style(self, scene_index: int, text: str, is_final_scene: bool) -> str:
-        if is_final_scene:
-            return "final_abyss"
-        palette = [
-            "ghoul_laugh",
-            "water_plunge",
-            "night_scream",
-            "chain_drag",
-            "shriek",
-            "bone_rattle",
-            "breath_rush",
-            "black_drift",
-            "wood_creak",
-            "metal_scrape",
-            "sub_boom",
-            "reverse_swell",
-            "bone_knock",
-            "bell_dread",
-            "breath_snap",
-        ]
-        if scene_index <= 0:
-            scene_index = 1
-        return palette[(scene_index - 1) % len(palette)]
-
-    def _accent_wave(self, style: str, t: np.ndarray, rng: np.random.Generator, scene_index: int, is_final_scene: bool) -> np.ndarray:
-        if style == "wood_creak":
-            base = 150.0 - scene_index * 4.0
-            sweep = np.linspace(1.0, 0.45, len(t))
-            return 0.52 * np.sin(2 * math.pi * base * sweep * t) + 0.12 * rng.normal(size=len(t))
-        if style == "ghoul_laugh":
-            bursts = np.zeros_like(t)
-            centers = [0.12, 0.28, 0.48, 0.69, 0.86]
-            for i, center in enumerate(centers):
-                width = t[-1] * (0.016 + i * 0.001)
-                idx = np.abs(t - (t[-1] * center)) < width
-                if idx.any():
-                    tone = 210.0 + 48.0 * (i % 2)
-                    bursts[idx] += 0.34 * np.sin(2 * math.pi * tone * t[idx])
-                    bursts[idx] += 0.18 * np.sin(2 * math.pi * (tone * 1.9) * t[idx])
-            return bursts + 0.08 * rng.normal(size=len(t))
-        if style == "water_plunge":
-            drop = np.exp(-2.2 * (t / max(t[-1], 0.001)))
-            splash = 0.30 * np.sin(2 * math.pi * 36.0 * t) + 0.22 * np.sin(2 * math.pi * 71.0 * t)
-            bubbles = 0.18 * rng.normal(size=len(t))
-            return (splash + bubbles) * drop
-        if style == "night_scream":
-            sweep = np.linspace(180.0, 980.0, len(t))
-            body = 0.44 * np.sin(2 * math.pi * sweep * t)
-            edge = 0.25 * np.sin(2 * math.pi * (sweep * 1.55) * t)
-            return (body + edge + 0.16 * rng.normal(size=len(t))) * np.linspace(0.12, 1.0, len(t))
-        if style == "chain_drag":
-            grit = 0.28 * rng.normal(size=len(t))
-            scrape = 0.26 * np.sin(2 * math.pi * (290.0 - 120.0 * (t / max(t[-1], 0.001))) * t)
-            metallic = 0.16 * np.sin(2 * math.pi * 920.0 * t)
-            return grit + scrape + metallic
-        if style == "shriek":
-            sweep = np.linspace(720.0, 1600.0, len(t))
-            return (0.34 * np.sin(2 * math.pi * sweep * t) + 0.24 * rng.normal(size=len(t))) * np.linspace(0.2, 1.0, len(t))
-        if style == "bone_rattle":
-            knocks = np.zeros_like(t)
-            hits = (0.18, 0.38, 0.56, 0.74, 0.91)
-            for i, center in enumerate(hits):
-                idx = np.abs(t - (t[-1] * center)) < (t[-1] * 0.018)
-                knocks[idx] += 0.66 * np.sin(2 * math.pi * (88.0 - 3.0 * i) * t[idx])
-            return knocks + 0.06 * rng.normal(size=len(t))
-        if style == "breath_rush":
-            inhale = np.maximum(0.0, np.sin(2 * math.pi * 0.72 * t))
-            exhale = np.maximum(0.0, np.sin(2 * math.pi * 1.35 * t + 0.4))
-            hiss = 0.22 * rng.normal(size=len(t))
-            return 0.32 * inhale + 0.18 * exhale + hiss
-        if style == "metal_scrape":
-            burst = np.zeros_like(t)
-            burst[t > t[-1] * 0.15] = 0.45
-            burst[t > t[-1] * 0.55] = 0.2
-            return 0.42 * rng.normal(size=len(t)) * burst + 0.18 * np.sin(2 * math.pi * (320 - 140 * (t / max(t[-1], 0.001))) * t)
-        if style == "sub_boom":
-            freq = 48.0 if not is_final_scene else 30.0
-            decay = np.exp(-2.8 * (t / max(t[-1], 0.001)))
-            return (0.7 * np.sin(2 * math.pi * freq * t) + 0.18 * np.sin(2 * math.pi * 2 * freq * t)) * decay
-        if style == "reverse_swell":
-            reverse_env = np.linspace(0.15, 1.0, len(t))
-            return (0.34 * rng.normal(size=len(t)) + 0.22 * np.sin(2 * math.pi * 95.0 * t)) * reverse_env
-        if style == "bone_knock":
-            knocks = np.zeros_like(t)
-            for center, freq in ((0.22, 92.0), (0.48, 88.0), (0.74, 84.0), (0.92, 80.0)):
-                idx = np.abs(t - (t[-1] * center)) < (t[-1] * 0.022)
-                knocks[idx] += 0.72 * np.sin(2 * math.pi * freq * t[idx])
-            return knocks + 0.08 * rng.normal(size=len(t))
-        if style == "bell_dread":
-            bell = 0.26 * np.sin(2 * math.pi * 610.0 * t) + 0.26 * np.sin(2 * math.pi * 616.0 * t)
-            return bell * np.exp(-1.8 * (t / max(t[-1], 0.001)))
-        if style == "breath_snap":
-            inhale = np.maximum(0.0, np.sin(2 * math.pi * 0.95 * t))
-            gasp = np.maximum(0.0, np.sin(2 * math.pi * 2.9 * t))
-            return 0.34 * inhale + 0.18 * gasp + 0.14 * rng.normal(size=len(t))
-        if style == "black_drift":
-            drift = 0.28 * np.sin(2 * math.pi * 28.0 * t) + 0.16 * np.sin(2 * math.pi * 57.0 * t)
-            return drift + 0.1 * rng.normal(size=len(t))
-        if style == "final_abyss":
-            return (
-                0.65 * np.sin(2 * math.pi * 24.0 * t)
-                + 0.24 * np.sin(2 * math.pi * 17.0 * t)
-                + 0.22 * rng.normal(size=len(t))
-                + 0.18 * np.sin(2 * math.pi * (160.0 - 120.0 * (t / max(t[-1], 0.001))) * t)
-                + 0.15 * np.maximum(0.0, np.sin(2 * math.pi * 1.2 * t))
-            )
-        if style == "final_wail":
-            sweep = np.linspace(520.0, 140.0, len(t))
-            return (
-                0.58 * np.sin(2 * math.pi * sweep * t)
-                + 0.28 * np.sin(2 * math.pi * (sweep * 1.86) * t)
-                + 0.26 * rng.normal(size=len(t))
-                + 0.20 * np.maximum(0.0, np.sin(2 * math.pi * 5.5 * t))
-            )
-        return 0.25 * rng.normal(size=len(t))
-
-    def _scene_needs_whisper(self, text: str, scene_index: int) -> bool:
-        lowered = text.lower()
-        keywords = (
-            "susurro",
-            "sombra",
-            "bosque",
-            "mira",
-            "mirar",
-            "voz",
-            "ojos",
-            "puerta",
-            "hielo",
-            "pozo",
-            "niebla",
-            "oscuro",
-            "oscura",
-            "no mires",
-            "respira",
-            "respirar",
-            "detrás",
-            "detras",
+    def _piano_note(self, freq: float, t: np.ndarray) -> np.ndarray:
+        tone = (
+            1.00 * np.sin(2 * math.pi * freq * t)
+            + 0.45 * np.sin(2 * math.pi * 2 * freq * t)
+            + 0.22 * np.sin(2 * math.pi * 3 * freq * t)
+            + 0.11 * np.sin(2 * math.pi * 4 * freq * t)
+            + 0.05 * np.sin(2 * math.pi * 5 * freq * t)
         )
-        return any(word in lowered for word in keywords) or scene_index >= 5
+        env = np.exp(-3.2 * t)
+        attack = min(len(t), 220)  # ~5 ms at 44.1 kHz to avoid clicks
+        if attack > 1:
+            ramp = np.ones(len(t))
+            ramp[:attack] = np.linspace(0.0, 1.0, attack)
+            env = env * ramp
+        return tone * env
+
+    def _render_melody(self, motif: list[tuple[int | None, float]], total_dur: float, sample_rate: int) -> np.ndarray:
+        frames_total = max(int(sample_rate * total_dur), sample_rate // 2)
+        out = np.zeros(frames_total, dtype=np.float64)
+        total_beats = sum(beats for _, beats in motif) or 1.0
+        beat_seconds = total_dur / total_beats
+        pos = 0.0
+        first_midi: int | None = None
+        for midi, beats in motif:
+            note_seconds = beats * beat_seconds
+            start = int(pos * sample_rate)
+            if midi is not None:
+                if first_midi is None:
+                    first_midi = midi
+                ring = min(note_seconds * 2.1, total_dur - pos)
+                ring = max(ring, 0.12)
+                frames = max(int(ring * sample_rate), 1)
+                t = np.linspace(0.0, ring, frames, endpoint=False)
+                wave_note = self._piano_note(self._note_freq(midi), t)
+                end = min(start + frames, frames_total)
+                out[start:end] += wave_note[: end - start]
+            pos += note_seconds
+
+        # Soft sustained bass an octave below the first note for warmth.
+        if first_midi is not None:
+            t = np.linspace(0.0, total_dur, frames_total, endpoint=False)
+            bass = 0.28 * self._piano_note(self._note_freq(first_midi - 12), t)
+            out += bass
+
+        peak = float(np.max(np.abs(out))) if out.size else 0.0
+        if peak > 0:
+            out = out / peak * 0.9
+        return out.astype(np.float32)
+
+    def _render_chord_sequence(self, progression, total_dur: float, sample_rate: int) -> np.ndarray:
+        frames_total = max(int(sample_rate * total_dur), sample_rate // 2)
+        out = np.zeros(frames_total, dtype=np.float64)
+        n = max(len(progression), 1)
+        seg = total_dur / n
+        for i, (root, quality) in enumerate(progression):
+            start = int(i * seg * sample_rate)
+            note_dur = min(total_dur - i * seg, seg * 1.85)
+            note_dur = max(note_dur, 0.25)
+            frames = max(int(note_dur * sample_rate), 1)
+            t = np.linspace(0.0, note_dur, frames, endpoint=False)
+            notes = self._chord_notes(root, quality)
+            chord = np.zeros(frames, dtype=np.float64)
+            for j, midi in enumerate(notes):
+                amp = 0.7 if j == 0 else 1.0  # bass note a touch softer
+                chord += amp * self._piano_note(self._note_freq(midi), t)
+            chord /= max(len(notes), 1)
+            end = min(start + frames, frames_total)
+            out[start:end] += chord[: end - start]
+        peak = float(np.max(np.abs(out))) if out.size else 0.0
+        if peak > 0:
+            out = out / peak * 0.9
+        return out.astype(np.float32)
 
     def _write_pcm_wav(self, output_path: Path, samples: np.ndarray, sample_rate: int) -> None:
         clipped = np.clip(samples, -1.0, 1.0)

@@ -80,6 +80,7 @@ class StorySettings(BaseModel):
             "El maestro y Margarita de Mijáil Bulgákov",
         ]
     )
+    rotation_state_path: str = "state/rotation.json"
 
 
 class AudioSettings(BaseModel):
@@ -95,15 +96,15 @@ class AudioSettings(BaseModel):
     voice_ducking_floor: float = 0.08
     voice_ducking_rise: float = 0.75
     accent_volume: float = 0.28
-    accent_tail_seconds: float = 2.0
+    accent_tail_seconds: float = 2.8
     whisper_volume: float = 0.18
     whisper_tail_seconds: float = 2.2
     final_accent_multiplier: float = 1.85
     final_whisper_multiplier: float = 1.5
-    final_accent_tail_seconds: float = 3.2
+    final_accent_tail_seconds: float = 4.4
     final_whisper_tail_seconds: float = 3.6
-    final_stinger_tail_seconds: float = 2.8
-    final_stinger_gap_seconds: float = 0.08
+    final_stinger_tail_seconds: float = 1.6
+    final_stinger_gap_seconds: float = 0.0
     final_stinger_volume: float = 0.42
     ambient_base_hz: float = 43.0
     voice_volume: float = 1.0

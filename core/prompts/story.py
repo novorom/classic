@@ -30,6 +30,8 @@ Return this exact JSON shape:
 {{
   "title": "Spanish title",
   "topic": "{topic}",
+  "book_title": "Exact title of the work in Spanish",
+  "author": "Full name of the author in Spanish",
   "hook": "Spanish hook",
   "scenes": [
     {{"index": 1, "text": "Spanish scene text", "image_prompt": "English image prompt"}},

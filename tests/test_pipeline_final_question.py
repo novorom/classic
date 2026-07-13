@@ -48,6 +48,7 @@ def test_pipeline_adds_final_question_clip(tmp_path):
     pipeline.sound_engine = SoundEngine(config, pipeline.logger)
 
     pipeline.video_engine.audio_duration = lambda path: 2.5  # type: ignore[method-assign]
+    pipeline.image_engine.generate_final_book_image = lambda story: tmp_path / "final_book.jpg"  # type: ignore[method-assign]
     pipeline.sound_engine.prepare_scene_layers = lambda *args, **kwargs: (Path("ambient.wav"), Path("accent.wav"), Path("whisper.wav"))  # type: ignore[method-assign]
     pipeline.subtitle_engine.burn = lambda image_path, text, index: tmp_path / f"subtitle_{index:02}.jpg"  # type: ignore[method-assign]
 

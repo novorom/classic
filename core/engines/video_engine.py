@@ -38,6 +38,7 @@ class VideoEngine:
             audio = mp.AudioFileClip(str(asset.audio_path))
             audio_clips.append(audio)
             duration = max(float(audio.duration or asset.duration), 1.0)
+            voice_end = duration
             audio_layers = [audio]
             if asset.ambient_path:
                 ambient = mp.AudioFileClip(str(asset.ambient_path))
@@ -45,22 +46,27 @@ class VideoEngine:
                 audio_clips.append(ambient)
             else:
                 ambient = None
-            if asset.accent_path:
-                accent = mp.AudioFileClip(str(asset.accent_path)).with_start(max(duration - self.config.audio.accent_tail_seconds, 0.0))
-                audio_layers.append(accent)
-                audio_clips.append(accent)
-            else:
-                accent = None
             if asset.whisper_path:
-                whisper = mp.AudioFileClip(str(asset.whisper_path)).with_start(max(duration - self.config.audio.whisper_tail_seconds, 0.0))
+                whisper = mp.AudioFileClip(str(asset.whisper_path)).with_start(max(voice_end - self.config.audio.whisper_tail_seconds, 0.0))
                 audio_layers.append(whisper)
                 audio_clips.append(whisper)
             else:
                 whisper = None
             clip_duration = duration
+            accent_end = voice_end
+            if asset.accent_path:
+                # Chords begin the instant the narration ends, with no pause.
+                accent = mp.AudioFileClip(str(asset.accent_path)).with_start(voice_end)
+                accent_end = voice_end + float(accent.duration or self.config.audio.accent_tail_seconds)
+                audio_layers.append(accent)
+                audio_clips.append(accent)
+                clip_duration = max(clip_duration, accent_end)
+            else:
+                accent = None
             if asset.stinger_path:
+                # Final resolving chord immediately after the closing progression.
                 stinger = mp.AudioFileClip(str(asset.stinger_path))
-                stinger_start = duration + self.config.audio.final_stinger_gap_seconds
+                stinger_start = accent_end + self.config.audio.final_stinger_gap_seconds
                 audio_layers.append(stinger.with_start(stinger_start))
                 audio_clips.append(stinger)
                 clip_duration = max(clip_duration, stinger_start + float(stinger.duration or self.config.audio.final_stinger_tail_seconds))
