@@ -14,22 +14,22 @@ from core.config import ProjectConfig
 
 class SoundEngine:
     # Chord progressions with a Russian romantic / classical feel (MIDI root, quality).
-    # One distinct pair per slide (indexed by scene position) so no two slides repeat.
+    # Three chords per slide, one distinct set per slide position, so no two slides repeat.
     REGULAR_PROGRESSIONS = [
-        [(57, "min"), (62, "min")],  # Am -> Dm
-        [(57, "min"), (64, "maj")],  # Am -> E
-        [(62, "min"), (57, "min")],  # Dm -> Am
-        [(60, "maj"), (55, "maj")],  # C -> G
-        [(57, "min"), (53, "maj")],  # Am -> F
-        [(52, "min"), (57, "min")],  # Em -> Am
-        [(65, "maj"), (64, "maj")],  # F -> E
-        [(59, "dim"), (57, "min")],  # Bdim -> Am
-        [(62, "min"), (55, "maj")],  # Dm -> G
-        [(60, "maj"), (57, "min")],  # C -> Am
-        [(55, "maj"), (57, "min")],  # G -> Am
-        [(64, "maj"), (57, "min")],  # E -> Am
+        [(57, "min"), (62, "min"), (64, "maj")],  # Am -> Dm -> E
+        [(57, "min"), (53, "maj"), (64, "maj")],  # Am -> F -> E
+        [(62, "min"), (55, "maj"), (57, "min")],  # Dm -> G -> Am
+        [(57, "min"), (64, "maj"), (57, "min")],  # Am -> E -> Am
+        [(60, "maj"), (55, "maj"), (57, "min")],  # C -> G -> Am
+        [(52, "min"), (57, "min"), (62, "min")],  # Em -> Am -> Dm
+        [(53, "maj"), (60, "maj"), (55, "maj")],  # F -> C -> G
+        [(57, "min"), (62, "min"), (57, "min")],  # Am -> Dm -> Am
+        [(62, "min"), (57, "min"), (64, "maj")],  # Dm -> Am -> E
+        [(55, "maj"), (52, "min"), (57, "min")],  # G -> Em -> Am
+        [(57, "min"), (60, "maj"), (55, "maj")],  # Am -> C -> G
+        [(53, "maj"), (64, "maj"), (57, "min")],  # F -> E -> Am
     ]
-    FINAL_PROGRESSION = [(57, "min"), (62, "min"), (64, "maj")]  # Am - Dm - E (resolves on stinger)
+    FINAL_PROGRESSION = [(57, "min"), (62, "min"), (64, "maj"), (57, "min")]  # Am - Dm - E - Am (+stinger)
 
     def __init__(self, config: ProjectConfig, logger: logging.Logger):
         self.config = config
