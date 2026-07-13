@@ -168,11 +168,7 @@ En este video descubrirás los secretos de este clásico de la literatura rusa.
 
 🔔 Activa la campanita para no perderte ningún video
 
-📱 Sígueme en redes:
-Instagram: @ClasicosEnCorto
-Twitter: @ClasicosEnCorto
-
-📚 Más videos de literatura rusa:
+ Más videos de literatura rusa:
 #literaturarusa #clasicos #libros #educacion #cultura
 
 ---
@@ -183,9 +179,9 @@ Este video es para fines educativos. Todos los derechos reservados a sus respect
             "youtube_title": social.get("youtube_title") or title[:58],
             "youtube_description": youtube_description.strip(),
             "instagram_caption": social.get("instagram_caption")
-            or f"{title}. ¿Qué opinas tú? 📚\n\n🔗 @ClasicosEnCorto",
+            or f"{title}. ¿Qué opinas tú? 📚",
             "tiktok_caption": social.get("tiktok_caption")
-            or f"{title}. ¿Lo leerías? 📖\n\n🔗 @ClasicosEnCorto",
+            or f"{title}. ¿Lo leerías? 📖",
             "hashtags": social.get("hashtags")
             or [
                 "#literaturarusa",
@@ -237,17 +233,13 @@ En este video descubrirás los secretos de este clásico de la literatura rusa.
 
 🔔 Activa la campanita para no perderte ningún video
 
-📱 Sígueme en redes:
-Instagram: @ClasicosEnCorto
-Twitter: @ClasicosEnCorto
-
-📚 Más videos de literatura rusa:
+ Más videos de literatura rusa:
 #literaturarusa #clasicos #libros #educacion #cultura
 
 ---
 Este video es para fines educativos. Todos los derechos reservados a sus respectivos autores.""",
-            instagram_caption=f"{topic}. ¿El fin justifica los medios? 📚\n\n🔗 @ClasicosEnCorto",
-            tiktok_caption=f"{topic}. La historia detrás del clásico. ¿Lo leerías? 📖\n\n🔗 @ClasicosEnCorto",
+            instagram_caption=f"{topic}. ¿El fin justifica los medios? 📚",
+            tiktok_caption=f"{topic}. La historia detrás del clásico. ¿Lo leerías? 📖",
             hashtags=[
                 "#literaturarusa",
                 "#dostoyevski",
