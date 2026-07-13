@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+ENV/
+.env
+.env.local
+.env.*.local
+.pytest_cache/
+
+# Pipeline output/cache
+cache/
+output/
+assets/

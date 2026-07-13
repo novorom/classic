@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { classicsData } from "./data/classicsData";
 import PhoneSimulator from "./components/PhoneSimulator";
 import ScriptEditor from "./components/ScriptEditor";
 import ResourceHub from "./components/ResourceHub";
+import YouTubeMetadataGenerator from "./components/YouTubeMetadataGenerator";
 
 function App() {
   const [activeClassicIndex, setActiveClassicIndex] = useState(0);
@@ -68,6 +69,9 @@ function App() {
 
             {/* Strategic Resource Hub */}
             <ResourceHub classic={currentClassic} />
+
+            {/* YouTube Metadata Generator */}
+            <YouTubeMetadataGenerator classic={currentClassic} />
           </div>
         </section>
       </main>

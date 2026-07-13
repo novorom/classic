@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Banner - Clásicos en Corto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            overflow: hidden;
+        }
+        
+        .banner {
+            width: 2560px;
+            height: 1440px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        /* Decorative elements */
+        .decorative-circle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+        }
+        
+        .circle-1 {
+            width: 800px;
+            height: 800px;
+            background: #e94560;
+            top: -200px;
+            right: -200px;
+        }
+        
+        .circle-2 {
+            width: 600px;
+            height: 600px;
+            background: #f59e0b;
+            bottom: -150px;
+            left: -150px;
+        }
+        
+        .circle-3 {
+            width: 400px;
+            height: 400px;
+            background: #e94560;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.05;
+        }
+        
+        /* Book pattern */
+        .books-pattern {
+            position: absolute;
+            font-size: 120px;
+            opacity: 0.03;
+            color: #ffffff;
+            line-height: 1.5;
+            letter-spacing: 20px;
+        }
+        
+        .books-left {
+            left: 100px;
+            top: 200px;
+        }
+        
+        .books-right {
+            right: 100px;
+            bottom: 200px;
+        }
+        
+        /* Main content */
+        .content {
+            text-align: center;
+            z-index: 10;
+            padding: 0 100px;
+        }
+        
+        .main-title {
+            font-size: 180px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            letter-spacing: 5px;
+        }
+        
+        .main-title .accent {
+            color: #e94560;
+        }
+        
+        .subtitle {
+            font-size: 80px;
+            color: #f59e0b;
+            margin-bottom: 60px;
+            font-style: italic;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .tagline {
+            font-size: 50px;
+            color: #ffffff;
+            opacity: 0.9;
+            margin-bottom: 80px;
+            font-family: 'Arial', sans-serif;
+            letter-spacing: 3px;
+        }
+        
+        /* Authors */
+        .authors {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin-bottom: 60px;
+        }
+        
+        .author {
+            font-size: 36px;
+            color: #ffffff;
+            opacity: 0.7;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        /* Call to action */
+        .cta {
+            font-size: 45px;
+            color: #e94560;
+            font-weight: bold;
+            padding: 20px 60px;
+            border: 3px solid #e94560;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 40px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        /* Decorative lines */
+        .line {
+            position: absolute;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #e94560, transparent);
+            opacity: 0.5;
+        }
+        
+        .line-top {
+            width: 800px;
+            top: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .line-bottom {
+            width: 800px;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        /* Safe zone indicator (remove for final) */
+        .safe-zone {
+            position: absolute;
+            border: 2px dashed rgba(255,255,255,0.2);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1546px;
+            height: 423px;
+            pointer-events: none;
+        }
+        
+        .safe-zone-label {
+            position: absolute;
+            top: -30px;
+            left: 0;
+            color: rgba(255,255,255,0.3);
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="banner">
+        <!-- Decorative elements -->
+        <div class="decorative-circle circle-1"></div>
+        <div class="decorative-circle circle-2"></div>
+        <div class="decorative-circle circle-3"></div>
+        
+        <!-- Book pattern -->
+        <div class="books-pattern books-left">
+            📚 📖 📚 📖 📚 📖 📚 📖 📚 📖
+        </div>
+        <div class="books-pattern books-right">
+            📖 📚 📖 📚 📖 📚 📖 📚 📖 📚
+        </div>
+        
+        <!-- Decorative lines -->
+        <div class="line line-top"></div>
+        <div class="line line-bottom"></div>
+        
+        <!-- Safe zone (remove for final) -->
+        <div class="safe-zone">
+            <span class="safe-zone-label">Safe Zone (1546x423)</span>
+        </div>
+        
+        <!-- Main content -->
+        <div class="content">
+            <div class="main-title">
+                Clásicos <span class="accent">en</span> Corto
+            </div>
+            <div class="subtitle">Literatura Rusa en Español</div>
+            <div class="tagline">Descubre los secretos de la literatura rusa</div>
+            
+            <div class="authors">
+                <span class="author">Dostoyevski</span>
+                <span class="author">•</span>
+                <span class="author">Tolstói</span>
+                <span class="author">•</span>
+                <span class="author">Bulgákov</span>
+            </div>
+            
+            <div class="cta">Suscríbete Ahora</div>
+        </div>
+    </div>
+</body>
+</html>

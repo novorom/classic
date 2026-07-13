@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Picture - Clásicos en Corto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #0a0a0a;
+        }
+        
+        .profile {
+            width: 800px;
+            height: 800px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(233, 69, 96, 0.3);
+        }
+        
+        /* Decorative circles */
+        .decorative-circle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+        }
+        
+        .circle-1 {
+            width: 600px;
+            height: 600px;
+            background: #e94560;
+            top: -100px;
+            right: -100px;
+        }
+        
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            background: #f59e0b;
+            bottom: -80px;
+            left: -80px;
+        }
+        
+        /* Book icon */
+        .book-icon {
+            font-size: 150px;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+        
+        /* Main text */
+        .main-title {
+            font-size: 60px;
+            font-weight: bold;
+            color: #ffffff;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        
+        .main-title .accent {
+            color: #e94560;
+        }
+        
+        /* Tagline */
+        .tagline {
+            font-size: 24px;
+            color: #f59e0b;
+            text-align: center;
+            font-style: italic;
+            font-family: 'Arial', sans-serif;
+            letter-spacing: 1px;
+        }
+        
+        /* Decorative elements */
+        .star {
+            position: absolute;
+            color: #f59e0b;
+            font-size: 30px;
+            opacity: 0.6;
+        }
+        
+        .star-1 {
+            top: 100px;
+            left: 150px;
+        }
+        
+        .star-2 {
+            top: 200px;
+            right: 120px;
+        }
+        
+        .star-3 {
+            bottom: 150px;
+            left: 180px;
+        }
+        
+        .star-4 {
+            bottom: 250px;
+            right: 160px;
+        }
+        
+        /* Border decoration */
+        .border-decoration {
+            position: absolute;
+            width: 750px;
+            height: 750px;
+            border: 3px solid rgba(233, 69, 96, 0.3);
+            border-radius: 50%;
+        }
+        
+        .border-decoration-2 {
+            position: absolute;
+            width: 700px;
+            height: 700px;
+            border: 2px solid rgba(245, 158, 11, 0.2);
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile">
+        <!-- Decorative circles -->
+        <div class="decorative-circle circle-1"></div>
+        <div class="decorative-circle circle-2"></div>
+        
+        <!-- Border decorations -->
+        <div class="border-decoration"></div>
+        <div class="border-decoration-2"></div>
+        
+        <!-- Stars -->
+        <div class="star star-1">✦</div>
+        <div class="star star-2">✦</div>
+        <div class="star star-3">✦</div>
+        <div class="star star-4">✦</div>
+        
+        <!-- Book icon -->
+        <div class="book-icon">📚</div>
+        
+        <!-- Main text -->
+        <div class="main-title">
+            Clásicos<br><span class="accent">en Corto</span>
+        </div>
+        
+        <!-- Tagline -->
+        <div class="tagline">Literatura Rusa</div>
+    </div>
+</body>
+</html>

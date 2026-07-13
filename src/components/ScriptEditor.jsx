@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 export default function ScriptEditor({ classic, activeScriptIndex, setActiveScriptIndex }) {
   const scripts = classic.scripts;
@@ -13,7 +13,7 @@ export default function ScriptEditor({ classic, activeScriptIndex, setActiveScri
     const fullText = currentScript.subtitles.map(s => s.text).join("\n");
     setEditedText(fullText);
     setCopied(false);
-  }, [classic, activeScriptIndex]);
+  }, [classic, activeScriptIndex, currentScript.subtitles]);
 
   const handleCopy = () => {
     // Format text nicely for a teleprompter

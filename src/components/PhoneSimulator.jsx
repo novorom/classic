@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function PhoneSimulator({ classic, activeScriptIndex }) {
   const script = classic.scripts[activeScriptIndex];
@@ -92,8 +92,8 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
         setTimeout(() => {
           if (oscillatorsRef.current.length > 0) {
             oscillatorsRef.current.forEach(({ osc, lfo }) => {
-              try { osc.stop(); } catch(e) {}
-              try { lfo.stop(); } catch(e) {}
+              try { osc.stop(); } catch {/* ignore */}
+              try { lfo.stop(); } catch {/* ignore */}
             });
             oscillatorsRef.current = [];
           }
@@ -132,7 +132,7 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       stopSynth();
     };
-  }, [isPlaying]);
+  }, [isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset timer on script/classic change
   useEffect(() => {
@@ -161,7 +161,7 @@ export default function PhoneSimulator({ classic, activeScriptIndex }) {
 
   // Heart & Comment simulator increments
   const [likes, setLikes] = useState(1284);
-  const [comments, setComments] = useState(89);
+  const [comments] = useState(89);
   const [liked, setLiked] = useState(false);
 
   const handleLike = () => {
