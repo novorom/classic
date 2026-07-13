@@ -44,39 +44,18 @@ class SoundEngine:
         duration: float,
         *,
         is_final_scene: bool = False,
-    ) -> tuple[Path, Path, Path | None]:
-        ambient_path = self.sound_dir / f"ambient_{scene_index:02}.wav"
+    ) -> tuple[Path | None, Path, Path | None]:
+        # Only the classical chord accent is produced; the horror-era ambient
+        # drone and whisper layers have been removed.
         accent_path = self.sound_dir / f"accent_{scene_index:02}.wav"
-        whisper_path = self.sound_dir / f"whisper_{scene_index:02}.wav"
-        ambient_fingerprint = self._fingerprint("ambient", scene_index, text, duration, is_final_scene)
         accent_style = self._accent_style(scene_index, text, is_final_scene)
         accent_fingerprint = self._fingerprint("accent", scene_index, text, duration, is_final_scene, accent_style)
-        whisper_enabled = self._scene_needs_whisper(text, scene_index)
-        whisper_fingerprint = self._fingerprint("whisper", scene_index, text, duration, is_final_scene)
-
-        self._ensure_sound_file(
-            ambient_path,
-            ambient_fingerprint,
-            lambda path: self._write_ambient_bed(path, duration, scene_index, text, is_final_scene),
-        )
         self._ensure_sound_file(
             accent_path,
             accent_fingerprint,
             lambda path: self._write_accent_fx(path, self.config.audio.accent_tail_seconds, scene_index, text, accent_style, is_final_scene),
         )
-        if whisper_enabled:
-            whisper_tail = (
-                self.config.audio.final_whisper_tail_seconds
-                if is_final_scene
-                else self.config.audio.whisper_tail_seconds * 1.05
-            )
-            self._ensure_sound_file(
-                whisper_path,
-                whisper_fingerprint,
-                lambda path: self._write_whisper_layer(path, whisper_tail, scene_index, text, is_final_scene),
-            )
-
-        return ambient_path, accent_path, whisper_path if whisper_enabled else None
+        return None, accent_path, None
 
     def prepare_final_stinger(self, scene_index: int, text: str, duration: float) -> Path:
         stinger_path = self.sound_dir / f"stinger_{scene_index:02}.wav"
@@ -124,27 +103,6 @@ class SoundEngine:
         if output_path.exists():
             meta_path.write_text(json.dumps({"fingerprint": fingerprint}, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    def _write_ambient_bed(self, output_path: Path, duration: float, scene_index: int, text: str, is_final_scene: bool) -> None:
-        sample_rate = 44_100
-        frames = max(int(sample_rate * duration), sample_rate)
-        t = np.linspace(0.0, duration, frames, endpoint=False)
-        seed = int(hashlib.sha256(f"{scene_index}:{text}".encode("utf-8")).hexdigest()[:8], 16)
-        rng = np.random.default_rng(seed)
-
-        base_hz = self.config.audio.ambient_base_hz
-        drone = (
-            0.26 * np.sin(2 * math.pi * base_hz * t)
-            + 0.14 * np.sin(2 * math.pi * (base_hz * 1.42) * t)
-            + 0.08 * np.sin(2 * math.pi * (base_hz * 2.07) * t)
-        )
-        hiss = 0.025 * rng.normal(size=frames)
-        pulse_rate = 0.06 + (0.02 if is_final_scene else 0.0)
-        pulse = 0.48 + 0.52 * np.sin(2 * math.pi * pulse_rate * t + scene_index)
-        envelope = self._ducking_envelope(duration, sample_rate)
-        final_boost = 1.12 if is_final_scene else 1.0
-        samples = (drone * pulse + hiss) * envelope * self.config.audio.music_volume * final_boost
-        self._write_pcm_wav(output_path, samples, sample_rate)
-
     def _write_accent_fx(self, output_path: Path, duration: float, scene_index: int, text: str, style: str, is_final_scene: bool) -> None:
         sample_rate = 44_100
         if is_final_scene:
@@ -162,21 +120,6 @@ class SoundEngine:
         samples = samples * volume
         self._write_pcm_wav(output_path, samples, sample_rate)
 
-    def _write_whisper_layer(self, output_path: Path, duration: float, scene_index: int, text: str, is_final_scene: bool) -> None:
-        sample_rate = 44_100
-        dur = duration * (1.4 if is_final_scene else 1.0)
-        frames = max(int(sample_rate * dur), sample_rate // 2)
-        t = np.linspace(0.0, dur, frames, endpoint=False)
-        seed = int(hashlib.sha256(f"whisper:{scene_index}:{text}:{is_final_scene}".encode("utf-8")).hexdigest()[:8], 16)
-        rng = np.random.default_rng(seed)
-        hiss = rng.normal(size=frames)
-        flutter = 0.5 + 0.5 * np.sin(2 * math.pi * (3.2 + (0.7 if is_final_scene else 0.0)) * t + scene_index)
-        breath = np.maximum(0.0, np.sin(2 * math.pi * (0.85 + (0.2 if is_final_scene else 0.0)) * t))
-        envelope = self._accent_envelope(dur, sample_rate)
-        volume = self.config.audio.whisper_volume * (self.config.audio.final_whisper_multiplier if is_final_scene else 1.0)
-        samples = (0.34 * hiss * flutter + 0.12 * breath) * envelope * volume
-        self._write_pcm_wav(output_path, samples, sample_rate)
-
     def _write_stinger_fx(self, output_path: Path, duration: float, scene_index: int, text: str) -> None:
         sample_rate = 44_100
         dur = self.config.audio.final_stinger_tail_seconds
@@ -184,38 +127,6 @@ class SoundEngine:
         samples = self._render_chord_sequence([(57, "min")], dur, sample_rate)
         samples = samples * self.config.audio.final_stinger_volume
         self._write_pcm_wav(output_path, samples, sample_rate)
-
-    def _fade_envelope(self, duration: float, sample_rate: int, fade_in: float, fade_out: float) -> np.ndarray:
-        frames = max(int(sample_rate * duration), sample_rate)
-        env = np.ones(frames, dtype=np.float32)
-        fade_in_frames = min(int(sample_rate * fade_in), frames)
-        fade_out_frames = min(int(sample_rate * fade_out), frames)
-        if fade_in_frames > 1:
-            env[:fade_in_frames] = np.linspace(0.0, 1.0, fade_in_frames)
-        if fade_out_frames > 1:
-            env[-fade_out_frames:] *= np.linspace(1.0, 0.0, fade_out_frames)
-        return env
-
-    def _ducking_envelope(self, duration: float, sample_rate: int) -> np.ndarray:
-        frames = max(int(sample_rate * duration), sample_rate)
-        env = np.full(frames, self.config.audio.voice_ducking_floor, dtype=np.float32)
-        rise_frames = max(int(sample_rate * min(duration, self.config.audio.voice_ducking_rise)), 1)
-        if rise_frames > 1:
-            env[:rise_frames] = np.linspace(self.config.audio.voice_ducking_floor, 1.0, rise_frames)
-        return env
-
-    def _accent_envelope(self, duration: float, sample_rate: int) -> np.ndarray:
-        frames = max(int(sample_rate * duration), sample_rate // 2)
-        env = np.zeros(frames, dtype=np.float32)
-        tail_frames = max(int(sample_rate * min(duration, self.config.audio.accent_tail_seconds)), 1)
-        start = max(frames - tail_frames, 0)
-        if start < frames:
-            attack = max(int(tail_frames * 0.45), 1)
-            sustain = max(tail_frames - attack, 1)
-            env[start : start + attack] = np.linspace(0.0, 1.0, attack)
-            if start + attack < frames:
-                env[start + attack : start + attack + sustain] = np.linspace(1.0, 0.35, min(sustain, frames - (start + attack)))
-        return env
 
     def _accent_style(self, scene_index: int, text: str, is_final_scene: bool) -> str:
         if is_final_scene:
@@ -269,30 +180,6 @@ class SoundEngine:
         if peak > 0:
             out = out / peak * 0.9
         return out.astype(np.float32)
-
-    def _scene_needs_whisper(self, text: str, scene_index: int) -> bool:
-        lowered = text.lower()
-        keywords = (
-            "susurro",
-            "sombra",
-            "bosque",
-            "mira",
-            "mirar",
-            "voz",
-            "ojos",
-            "puerta",
-            "hielo",
-            "pozo",
-            "niebla",
-            "oscuro",
-            "oscura",
-            "no mires",
-            "respira",
-            "respirar",
-            "detrás",
-            "detras",
-        )
-        return any(word in lowered for word in keywords) or scene_index >= 5
 
     def _write_pcm_wav(self, output_path: Path, samples: np.ndarray, sample_rate: int) -> None:
         clipped = np.clip(samples, -1.0, 1.0)
