@@ -80,6 +80,7 @@ class StorySettings(BaseModel):
             "El maestro y Margarita de Mijáil Bulgákov",
         ]
     )
+    rotation_state_path: str = "state/rotation.json"
 
 
 class AudioSettings(BaseModel):

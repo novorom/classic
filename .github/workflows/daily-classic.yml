@@ -23,6 +23,8 @@ on:
 jobs:
   generate-and-upload:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -51,6 +53,15 @@ jobs:
           TOPIC: ${{ github.event.inputs.topic }}
         run: |
           python main.py
+
+      - name: Persist topic rotation state
+        if: github.event.inputs.topic == ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state/rotation.json
+          git commit -m "chore: advance topic rotation [skip ci]" || echo "No rotation change to commit"
+          git push || echo "Nothing to push"
 
       - name: Upload generated video as artifact
         uses: actions/upload-artifact@v4
