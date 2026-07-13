@@ -1,0 +1,118 @@
+project:
+  name: "Russian Classics Engine"
+  language: "Spanish"
+  timezone: "Europe/Madrid"
+
+paths:
+  assets: "assets"
+  cache: "cache"
+  output: "output"
+  logs: "logs"
+  music: "assets/music"
+  fonts: "assets/fonts"
+
+providers:
+  story: "gemini"
+  image: "pollinations"
+  tts: "gtts"
+
+gemini:
+  model: "gemini-2.5-flash"
+  api_key_envs:
+    - "GEMINI_API_KEYS"
+    - "GEMINI_API_KEY_1"
+    - "GEMINI_API_KEY_2"
+    - "GEMINI_API_KEY_3"
+    - "GEMINI_API_KEY"
+  temperature: 0.9
+  max_retries: 3
+
+pollinations:
+  base_url: "https://image.pollinations.ai/prompt"
+  model: "flux"
+  width: 1080
+  height: 1920
+  enhance: true
+  safe: false
+  nologo: true
+  timeout_seconds: 90
+  max_retries: 3
+
+video:
+  width: 1080
+  height: 1920
+  fps: 30
+  horizontal_stretch: 1.0
+  codec: "libx264"
+  audio_codec: "aac"
+  preset: "medium"
+  crf: 20
+  scene_duration_seconds: 5.5
+  fallback_duration_seconds: 4.8
+  min_total_seconds: 40
+  max_total_seconds: 58
+
+story:
+  scene_count: 8
+  min_words_per_scene: 5
+  max_words_per_scene: 14
+  topics:
+    - "Crimen y castigo de Fiódor Dostoyevski"
+    - "Los hermanos Karamázov de Fiódor Dostoyevski"
+    - "El idiota de Fiódor Dostoyevski"
+    - "Guerra y paz de Lev Tolstói"
+    - "Anna Karénina de Lev Tolstói"
+    - "La muerte de Iván Ilich de Lev Tolstói"
+    - "El maestro y Margarita de Mijaíl Bulgákov"
+    - "Corazón de perro de Mijaíl Bulgákov"
+    - "Almas muertas de Nikolái Gógol"
+    - "El capote de Nikolái Gógol"
+    - "Eugenio Oneguin de Aleksandr Pushkin"
+    - "La dama de picas de Aleksandr Pushkin"
+    - "Padres e hijos de Iván Turguénev"
+    - "Un héroe de nuestro tiempo de Mijaíl Lérmontov"
+    - "El doctor Zhivago de Borís Pasternak"
+    - "Oblómov de Iván Goncharov"
+    - "El jardín de los cerezos de Antón Chéjov"
+    - "La dama del perrito de Antón Chéjov"
+
+audio:
+  voice: "es-ES-AlvaroNeural"
+  rate: "0%"
+  pitch: "0Hz"
+  volume: "+0%"
+  macos_voice: "Jorge (Español (España))"
+  voice_profile: "natural"
+  voice_lowpass_hz: 4200
+  voice_highpass_hz: 60
+  music_volume: 0.12
+  voice_ducking_floor: 0.08
+  voice_ducking_rise: 0.75
+  accent_volume: 0.20
+  accent_tail_seconds: 2.0
+  whisper_volume: 0.14
+  whisper_tail_seconds: 2.2
+  final_accent_multiplier: 1.4
+  final_whisper_multiplier: 1.3
+  final_accent_tail_seconds: 3.0
+  final_whisper_tail_seconds: 3.2
+  final_stinger_tail_seconds: 2.4
+  final_stinger_gap_seconds: 0.08
+  final_stinger_volume: 0.28
+  ambient_base_hz: 55.0
+  voice_volume: 1.0
+  fallback_silence: true
+
+subtitles:
+  font_file: ""
+  font_size: 64
+  max_chars_per_line: 18
+  bottom_margin: 300
+  text_color: "#F5E6C8"
+  stroke_color: "#1A120B"
+  stroke_width: 5
+  box_opacity: 160
+
+logging:
+  level: "INFO"
+  file: "render.log"
