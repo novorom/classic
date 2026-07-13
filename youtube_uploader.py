@@ -109,6 +109,8 @@ def main():
         print(f"Error: Video file not found: {video_path}")
         sys.exit(1)
     
+    privacy_status = os.getenv("YOUTUBE_PRIVACY", "public").strip() or "public"
+
     uploader = YouTubeUploader(client_id, client_secret, refresh_token)
     uploader.authenticate()
     
@@ -116,7 +118,8 @@ def main():
         video_path=video_path,
         title=title,
         description=description,
-        tags=["literatura rusa", "libros", "clasicos", "shorts", "booktok"]
+        tags=["literatura rusa", "libros", "clasicos", "shorts", "booktok"],
+        privacy_status=privacy_status,
     )
     
     print(f"Video uploaded: https://www.youtube.com/watch?v={video_id}")

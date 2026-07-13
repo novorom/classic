@@ -10,6 +10,15 @@ on:
         description: 'Optional literary work/topic to generate (leave empty for random)'
         required: false
         default: ''
+      privacy:
+        description: 'YouTube privacy status for this run'
+        required: false
+        default: 'public'
+        type: choice
+        options:
+          - public
+          - unlisted
+          - private
 
 jobs:
   generate-and-upload:
@@ -61,6 +70,7 @@ jobs:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_PRIVACY: ${{ github.event.inputs.privacy || 'public' }}
         run: |
           # Read metadata from generated files
           TITLE=$(head -1 output/youtube.txt)
