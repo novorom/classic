@@ -19,9 +19,11 @@ class SubtitleEngine:
         self.subtitle_dir.mkdir(parents=True, exist_ok=True)
 
     def burn(self, image_path: Path, text: str, index: int) -> Path:
-        # Create unique filename based on text content to avoid cache conflicts
+        # Key the cache on both the text and the source image so different
+        # background images (e.g. per-topic final book slide) never collide.
         text_hash = hashlib.md5(text.encode("utf-8")).hexdigest()[:8]
-        output = self.subtitle_dir / f"scene_{index:02}_{text_hash}.jpg"
+        image_hash = hashlib.md5(str(image_path).encode("utf-8")).hexdigest()[:8]
+        output = self.subtitle_dir / f"scene_{index:02}_{text_hash}_{image_hash}.jpg"
         
         # Return cached version if exists
         if output.exists():

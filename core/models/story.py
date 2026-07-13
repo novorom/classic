@@ -27,7 +27,20 @@ class Story(BaseModel):
     scenes: list[StoryScene]
     ending_question: str
     social: SocialMetadata
+    book_title: str = ""
+    author: str = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    def book_credits(self) -> tuple[str, str]:
+        """Return (work_title, author), falling back to parsing 'Work de Author'."""
+        title = self.book_title.strip()
+        author = self.author.strip()
+        if title and author:
+            return title, author
+        work, _, writer = self.topic.strip().rpartition(" de ")
+        if work:
+            return title or work.strip(), author or writer.strip()
+        return title or self.topic.strip(), author
 
     def narration_lines(self) -> list[str]:
         return [self.hook, *[scene.text for scene in self.scenes], self.ending_question]

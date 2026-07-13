@@ -14,6 +14,7 @@ from core.config import ProjectConfig
 
 class SoundEngine:
     # Chord progressions with a Russian romantic / classical feel (MIDI root, quality).
+    # One distinct pair per slide (indexed by scene position) so no two slides repeat.
     REGULAR_PROGRESSIONS = [
         [(57, "min"), (62, "min")],  # Am -> Dm
         [(57, "min"), (64, "maj")],  # Am -> E
@@ -23,8 +24,12 @@ class SoundEngine:
         [(52, "min"), (57, "min")],  # Em -> Am
         [(65, "maj"), (64, "maj")],  # F -> E
         [(59, "dim"), (57, "min")],  # Bdim -> Am
+        [(62, "min"), (55, "maj")],  # Dm -> G
+        [(60, "maj"), (57, "min")],  # C -> Am
+        [(55, "maj"), (57, "min")],  # G -> Am
+        [(64, "maj"), (57, "min")],  # E -> Am
     ]
-    FINAL_PROGRESSION = [(57, "min"), (62, "min"), (64, "maj"), (57, "min")]  # Am - Dm - E - Am
+    FINAL_PROGRESSION = [(57, "min"), (62, "min"), (64, "maj")]  # Am - Dm - E (resolves on stinger)
 
     def __init__(self, config: ProjectConfig, logger: logging.Logger):
         self.config = config
@@ -146,7 +151,7 @@ class SoundEngine:
             progression = self.FINAL_PROGRESSION
             total = self.config.audio.final_accent_tail_seconds
         else:
-            idx = (max(scene_index, 1) - 1) % len(self.REGULAR_PROGRESSIONS)
+            idx = scene_index % len(self.REGULAR_PROGRESSIONS)
             progression = self.REGULAR_PROGRESSIONS[idx]
             total = self.config.audio.accent_tail_seconds
 
@@ -215,7 +220,7 @@ class SoundEngine:
     def _accent_style(self, scene_index: int, text: str, is_final_scene: bool) -> str:
         if is_final_scene:
             return "final_cadence"
-        idx = (max(scene_index, 1) - 1) % len(self.REGULAR_PROGRESSIONS)
+        idx = scene_index % len(self.REGULAR_PROGRESSIONS)
         return f"chords_{idx}"
 
     def _note_freq(self, midi: int) -> float:

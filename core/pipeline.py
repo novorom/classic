@@ -136,9 +136,9 @@ class ClassicsPipeline:
                 )
             )
         
-        # Final question scene (index 9)
+        # Final question scene (index 9) — always a dedicated book slide, not a reused image
         final_audio = audio_paths[-1]
-        final_image = image_paths[-1]
+        final_image = self.image_engine.generate_final_book_image(story)
         final_duration = self.video_engine.audio_duration(final_audio)
         durations.append(final_duration)
         ambient_path, accent_path, whisper_path = self.sound_engine.prepare_scene_layers(

@@ -97,6 +97,9 @@ class GeminiStoryProvider(StoryProvider):
         payload.setdefault("topic", topic)
         payload.setdefault("title", topic)
         payload.setdefault("hook", "Este clásico ruso esconde un secreto que pocos conocen.")
+        work, author = self._split_topic(topic)
+        payload["book_title"] = str(payload.get("book_title") or "").strip() or work
+        payload["author"] = str(payload.get("author") or "").strip() or author
         payload["ending_question"] = self._normalize_ending_question(
             str(payload.get("ending_question") or ""),
             topic,
@@ -125,6 +128,12 @@ class GeminiStoryProvider(StoryProvider):
         if len(story.scenes) < 4:
             return self._fallback_story(topic)
         return story
+
+    def _split_topic(self, topic: str) -> tuple[str, str]:
+        work, _, author = topic.strip().rpartition(" de ")
+        if work:
+            return work.strip(), author.strip()
+        return topic.strip(), ""
 
     def _normalize_ending_question(self, text: str, topic: str) -> str:
         candidate = text.strip()
@@ -194,9 +203,12 @@ class GeminiStoryProvider(StoryProvider):
                 "#reels",
             ],
         )
+        work, author = self._split_topic(topic)
         return Story(
             title=topic,
             topic=topic,
+            book_title=work,
+            author=author,
             hook="Este clásico ruso esconde un secreto que pocos conocen.",
             scenes=[
                 StoryScene(index=i, text=text, image_prompt=f"{prompt}, vertical 9:16, no text")

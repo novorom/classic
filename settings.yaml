@@ -88,17 +88,17 @@ audio:
   music_volume: 0.12
   voice_ducking_floor: 0.08
   voice_ducking_rise: 0.75
-  accent_volume: 0.20
-  accent_tail_seconds: 2.0
+  accent_volume: 0.26
+  accent_tail_seconds: 1.3
   whisper_volume: 0.14
   whisper_tail_seconds: 2.2
   final_accent_multiplier: 1.4
   final_whisper_multiplier: 1.3
-  final_accent_tail_seconds: 3.0
+  final_accent_tail_seconds: 2.0
   final_whisper_tail_seconds: 3.2
-  final_stinger_tail_seconds: 2.4
-  final_stinger_gap_seconds: 0.08
-  final_stinger_volume: 0.28
+  final_stinger_tail_seconds: 1.6
+  final_stinger_gap_seconds: 0.0
+  final_stinger_volume: 0.30
   ambient_base_hz: 55.0
   voice_volume: 1.0
   fallback_silence: true
