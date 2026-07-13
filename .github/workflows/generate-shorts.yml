@@ -2,8 +2,8 @@ name: Generar Videos Literarios Automáticos
 
 on:
   schedule:
-    # Se ejecuta dos veces al día: a las 9:00 AM y a las 6:00 PM UTC
-    - cron: '0 9,18 * * *'
+    # Se ejecuta una vez al día: a las 18:00 UTC (20:00 GMT+2)
+    - cron: '0 18 * * *'
   workflow_dispatch:
     # Permite activar la generación del video de manera manual desde GitHub
     inputs:
