@@ -36,6 +36,22 @@ class ImageEngine:
 
     def generate_scene_images(self, story: Story) -> list[Path]:
         paths: list[Path] = []
+        
+        # Generate hook image first
+        hook_output = self.image_dir / f"scene_hook.jpg"
+        hook_prompt = (
+            f"Dramatic opening scene evoking {story.topic}, "
+            "mysterious atmosphere, 19th century Russia, "
+            "cinematic lighting, vertical 9:16, photorealistic, "
+            "no text, no watermark, high contrast"
+        )
+        self.logger.info("Generating hook image")
+        hook_path = self.provider.generate_image(hook_prompt, hook_output)
+        if not verify_image(hook_path, self.config.video.size):
+            self.logger.warning("Hook image had wrong size after generation: %s", hook_path)
+        paths.append(hook_path)
+        
+        # Generate scene images
         for scene in story.scenes:
             output = self.image_dir / f"scene_{scene.index:02}.jpg"
             self.logger.info("Generating image %s/%s", scene.index, len(story.scenes))
