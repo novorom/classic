@@ -127,6 +127,17 @@ class GeminiStoryProvider(StoryProvider):
 
         if len(story.scenes) < 4:
             return self._fallback_story(topic)
+
+        # Ensure hook is different from first scene text
+        if story.scenes and story.hook.strip() == story.scenes[0].text.strip():
+            self.logger.warning("Hook is same as first scene text, fixing...")
+            story.hook = f"¿Sabías que {story.hook.lower()}?"
+
+        # Ensure ending question is different from last scene text
+        if story.scenes and story.ending_question.strip() == story.scenes[-1].text.strip():
+            self.logger.warning("Ending question is same as last scene text, fixing...")
+            story.ending_question = self._viral_question(topic)
+
         return story
 
     def _split_topic(self, topic: str) -> tuple[str, str]:
