@@ -129,14 +129,23 @@ class GeminiStoryProvider(StoryProvider):
             return self._fallback_story(topic)
 
         # Ensure hook is different from first scene text
-        if story.scenes and story.hook.strip() == story.scenes[0].text.strip():
-            self.logger.warning("Hook is same as first scene text, fixing...")
-            story.hook = f"¿Sabías que {story.hook.lower()}?"
+        if story.scenes:
+            hook_text = story.hook.strip().lower()
+            first_scene_text = story.scenes[0].text.strip().lower()
+            # Check if hook contains scene text or vice versa
+            if hook_text == first_scene_text or hook_text in first_scene_text or first_scene_text in hook_text:
+                self.logger.warning("Hook is too similar to first scene text, fixing...")
+                # Generate a completely different hook
+                story.hook = self._generate_alternative_hook(topic)
 
         # Ensure ending question is different from last scene text
-        if story.scenes and story.ending_question.strip() == story.scenes[-1].text.strip():
-            self.logger.warning("Ending question is same as last scene text, fixing...")
-            story.ending_question = self._viral_question(topic)
+        if story.scenes:
+            ending_text = story.ending_question.strip().lower()
+            last_scene_text = story.scenes[-1].text.strip().lower()
+            # Check if ending contains scene text or vice versa
+            if ending_text == last_scene_text or ending_text in last_scene_text or last_scene_text in ending_text:
+                self.logger.warning("Ending question is too similar to last scene text, fixing...")
+                story.ending_question = self._viral_question(topic)
 
         return story
 
@@ -158,6 +167,18 @@ class GeminiStoryProvider(StoryProvider):
             "¿Crees que el fin justifica los medios?",
             "¿Qué clásico ruso quieres que cuente después?",
             "¿Te atreverías a leerlo entero?",
+        ]
+        digest = hashlib.sha256(topic.encode("utf-8")).digest()
+        return templates[digest[0] % len(templates)]
+
+    def _generate_alternative_hook(self, topic: str) -> str:
+        """Generate a completely different hook that won't conflict with scene text"""
+        templates = [
+            f"Este clásico ruso te dejará sin palabras.",
+            f"Lo que nadie te contó sobre {topic}.",
+            f"El secreto oculto en {topic}.",
+            f"¿Por qué {topic} cambió la literatura?",
+            f"La verdad detrás de {topic}.",
         ]
         digest = hashlib.sha256(topic.encode("utf-8")).digest()
         return templates[digest[0] % len(templates)]
