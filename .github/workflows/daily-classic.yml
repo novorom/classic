@@ -91,3 +91,11 @@ jobs:
             output/video.mp4 \
             "$TITLE" \
             "$DESCRIPTION"
+
+      - name: Send video to Telegram for manual posting
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.CLASSIC_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          node scripts/telegram_notifier.js
