@@ -84,7 +84,26 @@ async function main() {
     process.exit(1);
   }
 
-  const caption = `<b>🎬 New Russian Classics Video</b>\n\n<b>Topic:</b> ${topic}\n\n<b>Video ready for manual posting to TikTok, Instagram Reels, and YouTube Shorts!</b>`;
+  // Read social media descriptions
+  let tiktokCaption = "No TikTok description available";
+  let instagramCaption = "No Instagram description available";
+  let hashtags = "";
+
+  try {
+    if (fs.existsSync("./output/tiktok.txt")) {
+      tiktokCaption = fs.readFileSync("./output/tiktok.txt", "utf-8").trim();
+    }
+    if (fs.existsSync("./output/instagram.txt")) {
+      instagramCaption = fs.readFileSync("./output/instagram.txt", "utf-8").trim();
+    }
+    if (fs.existsSync("./output/hashtags.txt")) {
+      hashtags = fs.readFileSync("./output/hashtags.txt", "utf-8").trim();
+    }
+  } catch (error) {
+    console.warn("Warning: Could not read social media files:", error.message);
+  }
+
+  const caption = `<b>🎬 New Russian Classics Video</b>\n\n<b>Topic:</b> ${topic}\n\n<b>TikTok:</b>\n${tiktokCaption}\n\n<b>Instagram:</b>\n${instagramCaption}\n\n<b>Hashtags:</b>\n${hashtags}`;
 
   console.log("Sending video to Telegram...");
   try {
