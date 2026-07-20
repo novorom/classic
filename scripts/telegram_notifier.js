@@ -21,7 +21,8 @@ function sendTelegramVideo(videoPath, caption) {
     const boundary = "----WebKitFormBoundary" + Date.now();
     const videoData = fs.readFileSync(videoPath);
 
-    const formData = [
+    // Build multipart form data with binary video data
+    const preVideo = [
       `--${boundary}`,
       `Content-Disposition: form-data; name="chat_id"`,
       "",
@@ -37,10 +38,12 @@ function sendTelegramVideo(videoPath, caption) {
       `--${boundary}`,
       `Content-Disposition: form-data; name="video"; filename="classic_video.mp4"`,
       "Content-Type: video/mp4",
-      "",
-      videoData.toString("base64"),
-      `--${boundary}--`
+      ""
     ].join("\r\n");
+
+    const postVideo = `\r\n--${boundary}--`;
+
+    const totalLength = Buffer.byteLength(preVideo) + videoData.length + Buffer.byteLength(postVideo);
 
     const options = {
       hostname: "api.telegram.org",
@@ -48,7 +51,7 @@ function sendTelegramVideo(videoPath, caption) {
       method: "POST",
       headers: {
         "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        "Content-Length": Buffer.byteLength(formData)
+        "Content-Length": totalLength
       }
     };
 
@@ -70,7 +73,9 @@ function sendTelegramVideo(videoPath, caption) {
     });
 
     req.on("error", reject);
-    req.write(formData);
+    req.write(preVideo);
+    req.write(videoData);
+    req.write(postVideo);
     req.end();
   });
 }
