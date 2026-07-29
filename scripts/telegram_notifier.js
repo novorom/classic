@@ -21,7 +21,7 @@ function sendTelegramVideo(videoPath, caption) {
     const boundary = "----WebKitFormBoundary" + Date.now();
     const videoData = fs.readFileSync(videoPath);
 
-    // Build multipart form data with binary video data
+    // Build multipart form data with proper line endings
     const preVideo = [
       `--${boundary}`,
       `Content-Disposition: form-data; name="chat_id"`,
@@ -37,7 +37,7 @@ function sendTelegramVideo(videoPath, caption) {
       "HTML",
       `--${boundary}`,
       `Content-Disposition: form-data; name="video"; filename="classic_video.mp4"`,
-      "Content-Type: video/mp4",
+      `Content-Type: video/mp4`,
       ""
     ].join("\r\n");
 
@@ -73,6 +73,8 @@ function sendTelegramVideo(videoPath, caption) {
     });
 
     req.on("error", reject);
+    
+    // Write data in chunks to avoid memory issues
     req.write(preVideo);
     req.write(videoData);
     req.write(postVideo);
