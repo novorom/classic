@@ -86,25 +86,43 @@ async function main() {
   const videoPath = "./output/video.mp4";
   const topic = process.env.TOPIC || "random classic literature";
 
+  console.log("Starting Telegram notification...");
+  console.log(`Video path: ${videoPath}`);
+  console.log(`Topic: ${topic}`);
+
   if (!fs.existsSync(videoPath)) {
     console.error(`ERROR: Video file not found: ${videoPath}`);
     process.exit(1);
   }
+
+  console.log("Video file exists, checking size...");
+  const videoStats = fs.statSync(videoPath);
+  console.log(`Video size: ${videoStats.size} bytes`);
 
   // Read social media descriptions
   let tiktokCaption = "No TikTok description available";
   let instagramCaption = "No Instagram description available";
   let hashtags = "";
 
+  console.log("Reading social media files...");
   try {
     if (fs.existsSync("./output/tiktok.txt")) {
       tiktokCaption = fs.readFileSync("./output/tiktok.txt", "utf-8").trim();
+      console.log(`TikTok caption loaded (${tiktokCaption.length} chars)`);
+    } else {
+      console.log("TikTok file not found");
     }
     if (fs.existsSync("./output/instagram.txt")) {
       instagramCaption = fs.readFileSync("./output/instagram.txt", "utf-8").trim();
+      console.log(`Instagram caption loaded (${instagramCaption.length} chars)`);
+    } else {
+      console.log("Instagram file not found");
     }
     if (fs.existsSync("./output/hashtags.txt")) {
       hashtags = fs.readFileSync("./output/hashtags.txt", "utf-8").trim();
+      console.log(`Hashtags loaded (${hashtags.length} chars)`);
+    } else {
+      console.log("Hashtags file not found");
     }
   } catch (error) {
     console.warn("Warning: Could not read social media files:", error.message);
@@ -113,11 +131,13 @@ async function main() {
   const caption = `<b>🎬 New Russian Classics Video</b>\n\n<b>Topic:</b> ${topic}\n\n<b>TikTok:</b>\n${tiktokCaption}\n\n<b>Instagram:</b>\n${instagramCaption}\n\n<b>Hashtags:</b>\n${hashtags}`;
 
   console.log("Sending video to Telegram...");
+  console.log(`Caption length: ${caption.length} chars`);
   try {
     await sendTelegramVideo(videoPath, caption);
     console.log("✅ Video sent successfully!");
   } catch (error) {
     console.error("❌ Failed to send video:", error.message);
+    console.error("Error details:", error);
     process.exit(1);
   }
 }
