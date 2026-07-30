@@ -59,20 +59,34 @@ function sendTelegramVideo(videoPath, caption) {
       let body = "";
       res.on("data", (chunk) => body += chunk);
       res.on("end", () => {
+        console.log(`Telegram response status: ${res.statusCode}`);
+        console.log(`Telegram response body length: ${body.length}`);
+        
+        if (!body || body.trim() === "") {
+          console.error("Empty response from Telegram API");
+          reject(new Error("Empty response from Telegram API"));
+          return;
+        }
+        
         try {
           const response = JSON.parse(body);
+          console.log(`Telegram response parsed: ok=${response.ok}`);
           if (response.ok) {
             resolve(response);
           } else {
-            reject(new Error(response.description));
+            reject(new Error(response.description || "Unknown error"));
           }
         } catch (e) {
+          console.error("Failed to parse Telegram response:", body.substring(0, 200));
           reject(e);
         }
       });
     });
 
-    req.on("error", reject);
+    req.on("error", (error) => {
+      console.error("Telegram request error:", error.message);
+      reject(error);
+    });
     
     // Write data in chunks to avoid memory issues
     req.write(preVideo);
